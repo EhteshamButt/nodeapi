@@ -1,5 +1,6 @@
 const express = require("express");
 const dotenv = require("dotenv");
+const cors = require("cors");
 const connectDB = require("./config/db");
 const authRoutes = require("./routes/authRoutes");
 
@@ -7,7 +8,18 @@ dotenv.config();
 
 const app = express();
 
-// Middlewares
+// CORS configuration
+const corsOptions = {
+  origin: ["http://127.0.0.1:8000", "http://localhost:8000"],
+  methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+  allowedHeaders: ["Content-Type", "Authorization"],
+  credentials: true,
+};
+
+app.use(cors(corsOptions));
+app.options("*", cors(corsOptions));
+
+// Body parser
 app.use(express.json());
 
 // Connect to database
