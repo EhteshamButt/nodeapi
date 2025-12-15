@@ -8,12 +8,12 @@ dotenv.config();
 
 const app = express();
 
-// CORS configuration
+// CORS configuration - allow all origins, no credentials
 const corsOptions = {
-  origin: ["http://127.0.0.1:8000", "http://localhost:3000","https://passwordreset-two.vercel.app"],
+  origin: "*",
   methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
   allowedHeaders: ["Content-Type", "Authorization"],
-  credentials: true,
+  credentials: false,
 };
 
 app.use(cors(corsOptions));
