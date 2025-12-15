@@ -10,7 +10,7 @@ const app = express();
 
 // CORS configuration
 const corsOptions = {
-  origin: ["http://127.0.0.1:8000", "http://localhost:3000"],
+  origin: ["http://127.0.0.1:8000", "http://localhost:3000","https://passwordreset-two.vercel.app"],
   methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
   allowedHeaders: ["Content-Type", "Authorization"],
   credentials: true,
