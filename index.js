@@ -63,7 +63,7 @@ app.get("/", (req, res) => {
 
 // 404 handler
 app.use((req, res, next) => {
-  res.status(404).send("Sorry can't find that!");
+  res.status(404).send("Sorry can't find that route!");
 });
 
 // Error handler
