@@ -16,20 +16,31 @@ const corsOptions = {
   methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
   allowedHeaders: ["Content-Type", "Authorization", "stripe-signature"],
   credentials: false,
+  preflightContinue: false,
+  optionsSuccessStatus: 204,
 };
 
+// Apply CORS to all routes first
 app.use(cors(corsOptions));
-app.options("*", cors(corsOptions));
 
-// Stripe webhook needs raw body for signature verification
-app.use(
+// Handle preflight OPTIONS requests explicitly for all routes
+app.options("*", (req, res) => {
+  res.header("Access-Control-Allow-Origin", "*");
+  res.header("Access-Control-Allow-Methods", "GET, POST, PUT, PATCH, DELETE, OPTIONS");
+  res.header("Access-Control-Allow-Headers", "Content-Type, Authorization, stripe-signature");
+  res.sendStatus(204);
+});
+
+// Body parser for regular routes (must be before webhook)
+app.use(express.json());
+
+// Stripe webhook needs raw body for signature verification (must be after json parser)
+// Only apply raw body to webhook route, not other routes
+app.post(
   "/payment/webhook",
   express.raw({ type: "application/json" }),
   paymentController.stripeWebhook
 );
-
-// Body parser for other routes
-app.use(express.json());
 
 // Connect to database
 connectDB();
