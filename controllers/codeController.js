@@ -35,9 +35,13 @@ exports.createCode = async (req, res, next) => {
       });
     }
 
-    // Validate discount if provided
+    // Validate and parse discount if provided
+    let discountValue = 0;
     if (discount !== undefined) {
-      if (typeof discount !== "number" || discount < 0 || discount > 100) {
+      // Convert string to number if needed
+      discountValue = typeof discount === "string" ? parseFloat(discount) : discount;
+      
+      if (isNaN(discountValue) || discountValue < 0 || discountValue > 100) {
         return res.status(400).json({
           error: {
             code: "400",
@@ -50,7 +54,7 @@ exports.createCode = async (req, res, next) => {
     const newCode = await Code.create({
       code: code.trim(),
       description: description || "",
-      discount: discount !== undefined ? discount : 0,
+      discount: discountValue,
       isActive: isActive !== undefined ? isActive : true,
     });
 

@@ -38,7 +38,7 @@ const codeSchema = new mongoose.Schema(
 );
 
 // Index for faster queries
-codeSchema.index({ code: 1 });
+// Note: code field already has unique: true which creates an index automatically
 codeSchema.index({ isActive: 1 });
 
 const Code = mongoose.model("Code", codeSchema);
