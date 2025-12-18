@@ -82,15 +82,22 @@ This endpoint is automatically called by Stripe when payment events occur. You n
 
 1. Go to [Stripe Dashboard](https://dashboard.stripe.com/webhooks)
 2. Click "Add endpoint"
-3. Enter your webhook URL: `https://your-api-url.vercel.app/payment/webhook`
+3. Enter your webhook URL: `https://serverapis.vercel.app/payment/webhook`
 4. Select events: `checkout.session.completed`, `payment_intent.succeeded`
 5. Copy the webhook signing secret and add it to `.env` as `STRIPE_WEBHOOK_SECRET`
+
+## Deployed URLs
+
+- **Frontend**: https://passwordreset-two.vercel.app/
+- **Backend API**: https://serverapis.vercel.app/
+
+**Important**: Make sure to add `FRONTEND_URL=https://passwordreset-two.vercel.app` to your Vercel environment variables!
 
 ## Frontend Integration
 
 ### Step 1: Create Payment Session
 ```javascript
-const response = await fetch('https://your-api-url.vercel.app/payment/create-checkout-session', {
+const response = await fetch('https://serverapis.vercel.app/payment/create-checkout-session', {
   method: 'POST',
   headers: {
     'Content-Type': 'application/json',
@@ -114,7 +121,7 @@ const urlParams = new URLSearchParams(window.location.search);
 const sessionId = urlParams.get('session_id');
 
 // Verify payment
-const response = await fetch('https://your-api-url.vercel.app/payment/verify-session', {
+const response = await fetch('https://serverapis.vercel.app/payment/verify-session', {
   method: 'POST',
   headers: {
     'Content-Type': 'application/json',
@@ -130,7 +137,7 @@ if (data.paid) {
 
 ### Step 3: Check Payment Status
 ```javascript
-const response = await fetch(`https://your-api-url.vercel.app/payment/status/${userId}`);
+const response = await fetch(`https://serverapis.vercel.app/payment/status/${userId}`);
 const data = await response.json();
 
 if (data.user.paymentStatus) {
@@ -144,7 +151,7 @@ if (data.user.paymentStatus) {
 
 ### Create Checkout Session
 ```bash
-curl -X POST https://your-api-url.vercel.app/payment/create-checkout-session \
+curl -X POST https://serverapis.vercel.app/payment/create-checkout-session \
   -H "Content-Type: application/json" \
   -d '{
     "userId": "user_id_here",
@@ -155,12 +162,12 @@ curl -X POST https://your-api-url.vercel.app/payment/create-checkout-session \
 
 ### Get Payment Status
 ```bash
-curl -X GET https://your-api-url.vercel.app/payment/status/user_id_here
+curl -X GET https://serverapis.vercel.app/payment/status/user_id_here
 ```
 
 ### Verify Session
 ```bash
-curl -X POST https://your-api-url.vercel.app/payment/verify-session \
+curl -X POST https://serverapis.vercel.app/payment/verify-session \
   -H "Content-Type: application/json" \
   -d '{
     "sessionId": "cs_test_..."
