@@ -51,24 +51,20 @@ exports.createCode = async (req, res, next) => {
       }
     }
 
-    // Create code object with explicit discount field
+    // Create code object with explicit discount field - ALWAYS set it
     const codeData = {
       code: code.trim(),
       description: description || "",
-      discount: discountValue, // Always set explicitly
+      discount: discountValue, // Always set explicitly, even if 0
       isActive: isActive !== undefined ? isActive : true,
     };
 
-    console.log("Creating code with data:", codeData); // Debug log
-
     const newCode = await Code.create(codeData);
 
-    // Convert to plain object and ensure discount is included
-    const codeResponse = newCode.toObject ? newCode.toObject() : newCode;
-    // Force include discount field
-    codeResponse.discount = newCode.discount !== undefined ? newCode.discount : discountValue;
-    
-    console.log("Created code response:", codeResponse); // Debug log
+    // Convert to plain object and FORCE include discount
+    const codeResponse = newCode.toObject();
+    // ALWAYS set discount - never let it be undefined
+    codeResponse.discount = typeof newCode.discount === 'number' ? newCode.discount : discountValue;
 
     res.status(201).json({
       message: "Code created successfully",
@@ -109,13 +105,20 @@ exports.getAllCodes = async (req, res, next) => {
       .populate("usedBy", "username email")
       .sort({ createdAt: -1 })
       .skip(skip)
-      .limit(parseInt(limit));
+      .limit(parseInt(limit))
+      .lean(); // Use lean() to get plain objects
+
+    // Ensure discount field is always included
+    const codesWithDiscount = codes.map(code => ({
+      ...code,
+      discount: code.discount !== undefined && code.discount !== null ? code.discount : 0
+    }));
 
     const total = await Code.countDocuments(query);
 
     res.status(200).json({
       message: "Codes retrieved successfully",
-      codes,
+      codes: codesWithDiscount,
       pagination: {
         page: parseInt(page),
         limit: parseInt(limit),
@@ -151,7 +154,7 @@ exports.getCodeById = async (req, res, next) => {
       });
     }
 
-    const code = await Code.findById(id).populate("usedBy", "username email");
+    const code = await Code.findById(id).populate("usedBy", "username email").lean();
 
     if (!code) {
       return res.status(404).json({
@@ -162,9 +165,15 @@ exports.getCodeById = async (req, res, next) => {
       });
     }
 
+    // Ensure discount is included
+    const codeWithDiscount = {
+      ...code,
+      discount: code.discount !== undefined && code.discount !== null ? code.discount : 0
+    };
+
     res.status(200).json({
       message: "Code retrieved successfully",
-      code,
+      code: codeWithDiscount,
     });
   } catch (error) {
     console.error("Get code by ID error:", error);
@@ -194,10 +203,9 @@ exports.getCodeByCode = async (req, res, next) => {
       });
     }
 
-    const codeDoc = await Code.findOne({ code: code.trim() }).populate(
-      "usedBy",
-      "username email"
-    );
+    const codeDoc = await Code.findOne({ code: code.trim() })
+      .populate("usedBy", "username email")
+      .lean();
 
     if (!codeDoc) {
       return res.status(404).json({
@@ -208,9 +216,15 @@ exports.getCodeByCode = async (req, res, next) => {
       });
     }
 
+    // Ensure discount is included
+    const codeWithDiscount = {
+      ...codeDoc,
+      discount: codeDoc.discount !== undefined && codeDoc.discount !== null ? codeDoc.discount : 0
+    };
+
     res.status(200).json({
       message: "Code retrieved successfully",
-      code: codeDoc,
+      code: codeWithDiscount,
     });
   } catch (error) {
     console.error("Get code by code string error:", error);
@@ -282,7 +296,9 @@ exports.updateCode = async (req, res, next) => {
       id,
       { $set: updateData },
       { new: true, runValidators: true }
-    ).populate("usedBy", "username email");
+    )
+      .populate("usedBy", "username email")
+      .lean();
 
     if (!updatedCode) {
       return res.status(404).json({
@@ -293,9 +309,15 @@ exports.updateCode = async (req, res, next) => {
       });
     }
 
+    // Ensure discount is included
+    const codeWithDiscount = {
+      ...updatedCode,
+      discount: updatedCode.discount !== undefined && updatedCode.discount !== null ? updatedCode.discount : 0
+    };
+
     res.status(200).json({
       message: "Code updated successfully",
-      code: updatedCode,
+      code: codeWithDiscount,
     });
   } catch (error) {
     console.error("Update code error:", error);
