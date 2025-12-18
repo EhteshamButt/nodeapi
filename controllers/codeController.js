@@ -61,10 +61,12 @@ exports.createCode = async (req, res, next) => {
 
     const newCode = await Code.create(codeData);
 
-    // Convert to plain object and FORCE include discount
+    // Convert to plain object - toObject() will apply the transform
     const codeResponse = newCode.toObject();
-    // ALWAYS set discount - never let it be undefined
-    codeResponse.discount = typeof newCode.discount === 'number' ? newCode.discount : discountValue;
+    // Double-check: ALWAYS set discount - never let it be undefined
+    if (codeResponse.discount === undefined || codeResponse.discount === null) {
+      codeResponse.discount = discountValue;
+    }
 
     res.status(201).json({
       message: "Code created successfully",
@@ -108,11 +110,15 @@ exports.getAllCodes = async (req, res, next) => {
       .limit(parseInt(limit))
       .lean(); // Use lean() to get plain objects
 
-    // Ensure discount field is always included
-    const codesWithDiscount = codes.map(code => ({
-      ...code,
-      discount: code.discount !== undefined && code.discount !== null ? code.discount : 0
-    }));
+    // Ensure discount field is ALWAYS included (lean() returns plain objects)
+    const codesWithDiscount = codes.map(code => {
+      const codeObj = { ...code };
+      // ALWAYS include discount - default to 0 if missing
+      if (codeObj.discount === undefined || codeObj.discount === null || isNaN(codeObj.discount)) {
+        codeObj.discount = 0;
+      }
+      return codeObj;
+    });
 
     const total = await Code.countDocuments(query);
 
@@ -165,11 +171,11 @@ exports.getCodeById = async (req, res, next) => {
       });
     }
 
-    // Ensure discount is included
-    const codeWithDiscount = {
-      ...code,
-      discount: code.discount !== undefined && code.discount !== null ? code.discount : 0
-    };
+    // Ensure discount is ALWAYS included
+    const codeWithDiscount = { ...code };
+    if (codeWithDiscount.discount === undefined || codeWithDiscount.discount === null || isNaN(codeWithDiscount.discount)) {
+      codeWithDiscount.discount = 0;
+    }
 
     res.status(200).json({
       message: "Code retrieved successfully",
@@ -216,11 +222,11 @@ exports.getCodeByCode = async (req, res, next) => {
       });
     }
 
-    // Ensure discount is included
-    const codeWithDiscount = {
-      ...codeDoc,
-      discount: codeDoc.discount !== undefined && codeDoc.discount !== null ? codeDoc.discount : 0
-    };
+    // Ensure discount is ALWAYS included
+    const codeWithDiscount = { ...codeDoc };
+    if (codeWithDiscount.discount === undefined || codeWithDiscount.discount === null || isNaN(codeWithDiscount.discount)) {
+      codeWithDiscount.discount = 0;
+    }
 
     res.status(200).json({
       message: "Code retrieved successfully",
@@ -309,11 +315,11 @@ exports.updateCode = async (req, res, next) => {
       });
     }
 
-    // Ensure discount is included
-    const codeWithDiscount = {
-      ...updatedCode,
-      discount: updatedCode.discount !== undefined && updatedCode.discount !== null ? updatedCode.discount : 0
-    };
+    // Ensure discount is ALWAYS included
+    const codeWithDiscount = { ...updatedCode };
+    if (codeWithDiscount.discount === undefined || codeWithDiscount.discount === null || isNaN(codeWithDiscount.discount)) {
+      codeWithDiscount.discount = 0;
+    }
 
     res.status(200).json({
       message: "Code updated successfully",

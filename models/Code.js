@@ -40,10 +40,17 @@ const codeSchema = new mongoose.Schema(
 // Ensure discount field is always included in JSON output
 codeSchema.set("toJSON", {
   transform: function (doc, ret) {
-    // Ensure discount is always included, even if 0
-    if (ret.discount === undefined) {
-      ret.discount = 0;
-    }
+    // ALWAYS include discount field - set to 0 if undefined or null
+    ret.discount = ret.discount !== undefined && ret.discount !== null ? ret.discount : 0;
+    return ret;
+  },
+});
+
+// Also set for toObject
+codeSchema.set("toObject", {
+  transform: function (doc, ret) {
+    // ALWAYS include discount field - set to 0 if undefined or null
+    ret.discount = ret.discount !== undefined && ret.discount !== null ? ret.discount : 0;
     return ret;
   },
 });
