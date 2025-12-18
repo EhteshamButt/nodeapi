@@ -37,6 +37,17 @@ const codeSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
+// Ensure discount field is always included in JSON output
+codeSchema.set("toJSON", {
+  transform: function (doc, ret) {
+    // Ensure discount is always included, even if 0
+    if (ret.discount === undefined) {
+      ret.discount = 0;
+    }
+    return ret;
+  },
+});
+
 // Index for faster queries
 // Note: code field already has unique: true which creates an index automatically
 codeSchema.index({ isActive: 1 });

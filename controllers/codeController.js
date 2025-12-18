@@ -37,9 +37,9 @@ exports.createCode = async (req, res, next) => {
 
     // Validate and parse discount if provided
     let discountValue = 0;
-    if (discount !== undefined) {
+    if (discount !== undefined && discount !== null) {
       // Convert string to number if needed
-      discountValue = typeof discount === "string" ? parseFloat(discount) : discount;
+      discountValue = typeof discount === "string" ? parseFloat(discount) : Number(discount);
       
       if (isNaN(discountValue) || discountValue < 0 || discountValue > 100) {
         return res.status(400).json({
@@ -51,16 +51,28 @@ exports.createCode = async (req, res, next) => {
       }
     }
 
-    const newCode = await Code.create({
+    // Create code object with explicit discount field
+    const codeData = {
       code: code.trim(),
       description: description || "",
-      discount: discountValue,
+      discount: discountValue, // Always set explicitly
       isActive: isActive !== undefined ? isActive : true,
-    });
+    };
+
+    console.log("Creating code with data:", codeData); // Debug log
+
+    const newCode = await Code.create(codeData);
+
+    // Convert to plain object and ensure discount is included
+    const codeResponse = newCode.toObject ? newCode.toObject() : newCode;
+    // Force include discount field
+    codeResponse.discount = newCode.discount !== undefined ? newCode.discount : discountValue;
+    
+    console.log("Created code response:", codeResponse); // Debug log
 
     res.status(201).json({
       message: "Code created successfully",
-      code: newCode,
+      code: codeResponse,
     });
   } catch (error) {
     console.error("Create code error:", error);
