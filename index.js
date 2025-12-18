@@ -39,16 +39,16 @@ app.options("*", (req, res) => {
   res.sendStatus(204);
 });
 
-// Body parser for regular routes (must be before webhook)
-app.use(express.json());
-
-// Stripe webhook needs raw body for signature verification (must be after json parser)
-// Only apply raw body to webhook route, not other routes
+// Stripe webhook needs raw body for signature verification
+// Must be BEFORE express.json() middleware
 app.post(
   "/payment/webhook",
   express.raw({ type: "application/json" }),
   paymentController.stripeWebhook
 );
+
+// Body parser for regular routes (must be after webhook)
+app.use(express.json());
 
 // Connect to database
 connectDB();

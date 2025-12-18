@@ -120,59 +120,80 @@ exports.createCheckoutSession = async (req, res, next) => {
 
 // POST /payment/webhook - Stripe webhook handler
 exports.stripeWebhook = async (req, res, next) => {
-  if (!stripe) {
-    console.error("ERROR: Stripe is not initialized. STRIPE_SECRET_KEY is not set!");
-    return res.status(500).send("Stripe not configured");
-  }
-
-  const sig = req.headers["stripe-signature"];
-  const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
-
-  if (!webhookSecret) {
-    console.error("ERROR: STRIPE_WEBHOOK_SECRET is not set in environment variables!");
-    return res.status(500).send("Webhook secret not configured");
-  }
-
-  let event;
-
   try {
-    event = stripe.webhooks.constructEvent(req.body, sig, webhookSecret);
-  } catch (err) {
-    console.error("Webhook signature verification failed:", err.message);
-    return res.status(400).send(`Webhook Error: ${err.message}`);
-  }
-
-  // Handle the event
-  try {
-    switch (event.type) {
-      case "checkout.session.completed":
-        const session = event.data.object;
-        const userId = session.metadata?.userId;
-
-        if (userId) {
-          const user = await User.findById(userId);
-          if (user) {
-            user.paymentStatus = true;
-            user.paymentDate = new Date();
-            await user.save();
-            console.log(`Payment successful for user: ${userId}`);
-          }
-        }
-        break;
-
-      case "payment_intent.succeeded":
-        const paymentIntent = event.data.object;
-        console.log("PaymentIntent succeeded:", paymentIntent.id);
-        break;
-
-      default:
-        console.log(`Unhandled event type: ${event.type}`);
+    if (!stripe) {
+      console.error("ERROR: Stripe is not initialized. STRIPE_SECRET_KEY is not set!");
+      return res.status(500).json({ error: "Stripe not configured" });
     }
 
-    res.json({ received: true });
+    const sig = req.headers["stripe-signature"];
+    const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
+
+    if (!webhookSecret || webhookSecret === "whsec_your_webhook_secret_here") {
+      console.error("ERROR: STRIPE_WEBHOOK_SECRET is not set or is placeholder!");
+      return res.status(500).json({ error: "Webhook secret not configured" });
+    }
+
+    // Get raw body - handle both Buffer and string
+    let rawBody = req.body;
+    if (Buffer.isBuffer(rawBody)) {
+      // Body is already a Buffer, use as is
+    } else if (typeof rawBody === "string") {
+      rawBody = Buffer.from(rawBody, "utf8");
+    } else {
+      // Try to get raw body from request
+      rawBody = req.rawBody || req.body;
+      if (!Buffer.isBuffer(rawBody)) {
+        rawBody = Buffer.from(JSON.stringify(rawBody), "utf8");
+      }
+    }
+
+    let event;
+
+    try {
+      event = stripe.webhooks.constructEvent(rawBody, sig, webhookSecret);
+    } catch (err) {
+      console.error("Webhook signature verification failed:", err.message);
+      return res.status(400).json({ error: `Webhook Error: ${err.message}` });
+    }
+
+    // Handle the event
+    try {
+      switch (event.type) {
+        case "checkout.session.completed":
+          const session = event.data.object;
+          const userId = session.metadata?.userId;
+
+          if (userId) {
+            const user = await User.findById(userId);
+            if (user) {
+              user.paymentStatus = true;
+              user.paymentDate = new Date();
+              await user.save();
+              console.log(`Payment successful for user: ${userId}`);
+            }
+          }
+          break;
+
+        case "payment_intent.succeeded":
+          const paymentIntent = event.data.object;
+          console.log("PaymentIntent succeeded:", paymentIntent.id);
+          break;
+
+        default:
+          console.log(`Unhandled event type: ${event.type}`);
+      }
+
+      res.json({ received: true });
+    } catch (error) {
+      console.error("Webhook handler error:", error);
+      console.error("Error stack:", error.stack);
+      res.status(500).json({ error: "Webhook handler failed", message: error.message });
+    }
   } catch (error) {
-    console.error("Webhook handler error:", error);
-    res.status(500).json({ error: "Webhook handler failed" });
+    console.error("Webhook outer error:", error);
+    console.error("Error stack:", error.stack);
+    res.status(500).json({ error: "Webhook failed", message: error.message });
   }
 };
 
