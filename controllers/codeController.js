@@ -209,7 +209,9 @@ exports.getCodeByCode = async (req, res, next) => {
       });
     }
 
-    const codeDoc = await Code.findOne({ code: code.trim() })
+    const codeDoc = await Code.findOne({ 
+      code: { $regex: new RegExp(`^${code.trim()}$`, "i") } 
+    })
       .populate("usedBy", "username email")
       .lean();
 

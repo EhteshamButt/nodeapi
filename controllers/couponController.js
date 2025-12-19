@@ -25,9 +25,9 @@ exports.validateCoupon = async (req, res, next) => {
       });
     }
 
-    // Find the code
+    // Find the code (case-insensitive)
     const couponCode = await Code.findOne({ 
-      code: code.trim(),
+      code: { $regex: new RegExp(`^${code.trim()}$`, "i") },
       isActive: true 
     }).lean();
 

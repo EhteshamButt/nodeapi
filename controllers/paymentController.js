@@ -85,7 +85,7 @@ exports.createCheckoutSession = async (req, res, next) => {
 
     if (couponCode) {
       const coupon = await Code.findOne({
-        code: couponCode.trim(),
+        code: { $regex: new RegExp(`^${couponCode.trim()}$`, "i") },
         isActive: true,
       });
 
