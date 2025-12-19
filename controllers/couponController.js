@@ -36,7 +36,7 @@ exports.validateCoupon = async (req, res, next) => {
         success: false,
         error: {
           code: "404",
-          message: "Invalid or inactive coupon code",
+          message: `Coupon code "${code}" is invalid or inactive`,
         },
       });
     }
