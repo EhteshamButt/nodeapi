@@ -25,6 +25,9 @@ router.get("/status/:userId", paymentController.getPaymentStatus);
 // Verify payment session (after redirect)
 router.post("/verify-session", paymentController.verifySession);
 
+// Update payment status (admin endpoint)
+router.post("/update-status", paymentController.updatePaymentStatus);
+
 // Stripe webhook (must be before express.json middleware in index.js)
 // This route needs raw body, so we'll handle it separately in index.js
 

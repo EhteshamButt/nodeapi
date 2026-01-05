@@ -456,4 +456,88 @@ exports.verifySession = async (req, res, next) => {
   }
 };
 
+// POST /payment/update-status - Admin endpoint to manually update payment status
+exports.updatePaymentStatus = async (req, res, next) => {
+  // Set CORS headers first
+  res.header("Access-Control-Allow-Origin", "*");
+  res.header("Access-Control-Allow-Methods", "GET, POST, PUT, PATCH, DELETE, OPTIONS");
+  res.header("Access-Control-Allow-Headers", "Content-Type, Authorization");
+
+  try {
+    const { userId, paymentStatus, paymentDate } = req.body;
+
+    if (!userId) {
+      return res.status(400).json({
+        error: {
+          code: "400",
+          message: "User ID is required",
+        },
+      });
+    }
+
+    // Validate userId format
+    if (!mongoose.Types.ObjectId.isValid(userId)) {
+      return res.status(400).json({
+        error: {
+          code: "400",
+          message: "Invalid user ID format",
+        },
+      });
+    }
+
+    // Find user
+    const user = await User.findById(userId);
+    if (!user) {
+      return res.status(404).json({
+        error: {
+          code: "404",
+          message: "User not found",
+        },
+      });
+    }
+
+    // Update payment status
+    if (paymentStatus !== undefined) {
+      user.paymentStatus = paymentStatus;
+    }
+
+    // Update payment date
+    if (paymentDate !== undefined) {
+      user.paymentDate = paymentDate ? new Date(paymentDate) : new Date();
+    }
+
+    // If setting paymentStatus to true, also update subscription status
+    if (paymentStatus === true) {
+      user.subscriptionStatus = "active";
+      // Set expiry date to 1 year from now if not already set
+      if (!user.subscriptionExpiryDate) {
+        user.subscriptionExpiryDate = new Date(Date.now() + 365 * 24 * 60 * 60 * 1000); // 1 year
+      }
+    }
+
+    await user.save();
+
+    res.status(200).json({
+      message: "Payment status updated successfully",
+      user: {
+        id: user._id.toString(),
+        username: user.username,
+        email: user.email,
+        paymentStatus: user.paymentStatus,
+        paymentDate: user.paymentDate,
+        subscriptionStatus: user.subscriptionStatus,
+        subscriptionExpiryDate: user.subscriptionExpiryDate,
+      },
+    });
+  } catch (error) {
+    console.error("Update payment status error:", error);
+    res.status(500).json({
+      error: {
+        code: "500",
+        message: error.message || "Failed to update payment status",
+      },
+    });
+  }
+};
+
 
