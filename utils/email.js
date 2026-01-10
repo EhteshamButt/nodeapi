@@ -1,6 +1,6 @@
 const nodemailer = require("nodemailer");
 
-const sendEmail = async ({ to, subject, html }) => {
+const sendEmail = async ({ to, subject, html, text }) => {
   const host = process.env.EMAIL_HOST;
   const port = parseInt(process.env.EMAIL_PORT || "587");
   const user = process.env.EMAIL_USERNAME || process.env.EMAIL_USER;
@@ -42,6 +42,7 @@ const sendEmail = async ({ to, subject, html }) => {
       to,
       subject,
       html,
+      ...(text && { text }), // Include text if provided
     };
 
     const info = await transporter.sendMail(mailOptions);
