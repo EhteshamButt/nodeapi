@@ -298,6 +298,11 @@ exports.deleteAdmin = async (req, res, next) => {
 
 // GET /auth/stats - Get admin dashboard statistics
 exports.getAdminStats = async (req, res, next) => {
+  // Set CORS headers first
+  res.header("Access-Control-Allow-Origin", "*");
+  res.header("Access-Control-Allow-Methods", "GET, POST, PUT, PATCH, DELETE, OPTIONS");
+  res.header("Access-Control-Allow-Headers", "Content-Type, Authorization");
+  
   try {
     const now = new Date();
     const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
@@ -382,6 +387,11 @@ exports.getAdminStats = async (req, res, next) => {
 
 // GET /auth/recent-activity - Get recent activity
 exports.getRecentActivity = async (req, res, next) => {
+  // Set CORS headers first
+  res.header("Access-Control-Allow-Origin", "*");
+  res.header("Access-Control-Allow-Methods", "GET, POST, PUT, PATCH, DELETE, OPTIONS");
+  res.header("Access-Control-Allow-Headers", "Content-Type, Authorization");
+  
   try {
     const Code = require("../models/Code");
     

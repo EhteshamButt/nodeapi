@@ -67,7 +67,7 @@ exports.createCheckoutSession = async (req, res, next) => {
       });
     }
 
-    const { userId, amount, currency = "usd", couponCode } = req.body;
+    const { userId, amount, currency = "usd", couponCode, returnUrl } = req.body;
 
     if (!userId || !amount) {
       return res.status(400).json({
@@ -167,19 +167,33 @@ exports.createCheckoutSession = async (req, res, next) => {
     ];
 
     // Create checkout session
+    // Determine success URL - use returnUrl if provided (for Unity app), otherwise use web success page
+    let successUrl;
+    if (returnUrl) {
+      // For Unity app: returnUrl should be like "kumuapp://payment-success"
+      // We'll append session_id parameter
+      successUrl = returnUrl.includes('?') 
+        ? `${returnUrl}&session_id={CHECKOUT_SESSION_ID}&userId=${user._id.toString()}`
+        : `${returnUrl}?session_id={CHECKOUT_SESSION_ID}&userId=${user._id.toString()}`;
+    } else {
+      // Default web success page
+      successUrl = `${process.env.FRONTEND_URL || "http://localhost:3000"}/payment/success?session_id={CHECKOUT_SESSION_ID}&userId=${user._id.toString()}`;
+    }
+
     const session = await stripe.checkout.sessions.create({
       customer: customerId,
       payment_method_types: ["card"],
       line_items: lineItems,
       mode: "payment",
-      success_url: `${process.env.FRONTEND_URL || "http://localhost:3000"}/payment/success?session_id={CHECKOUT_SESSION_ID}`,
-      cancel_url: `${process.env.FRONTEND_URL || "http://localhost:3000"}/payment?userId=${user._id.toString()}`,
+      success_url: successUrl,
+      cancel_url: `${process.env.FRONTEND_URL || "http://localhost:3000"}/payment?userId=${user._id.toString()}${returnUrl ? `&returnUrl=${encodeURIComponent(returnUrl)}` : ''}`,
       metadata: {
         userId: user._id.toString(),
         couponCode: appliedCoupon ? appliedCoupon.code : null,
         originalAmount: amount.toString(),
         discountAmount: discountAmount.toString(),
         finalAmount: finalAmount.toString(),
+        returnUrl: returnUrl || null,
       },
     });
 
