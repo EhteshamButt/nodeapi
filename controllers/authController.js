@@ -117,6 +117,7 @@ exports.login = async (req, res, next) => {
         id: user._id.toString(),
         username: user.username,
         email: user.email,
+        userType: user.userType || "user",
       },
     });
   } catch (error) {
