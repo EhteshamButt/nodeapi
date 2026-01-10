@@ -729,6 +729,118 @@ exports.updateUser = async (req, res, next) => {
   }
 };
 
+// PUT /auth/profile - Update current user's profile
+exports.updateProfile = async (req, res, next) => {
+  try {
+    const userId = req.user?.id || req.body.userId; // Get from token or body
+    
+    if (!userId) {
+      return res.status(401).json({
+        error: {
+          code: "401",
+          message: "User not authenticated",
+        },
+      });
+    }
+
+    const { username, email, password, currentPassword } = req.body;
+
+    const user = await User.findById(userId);
+
+    if (!user) {
+      return res.status(404).json({
+        error: {
+          code: "404",
+          message: "User not found",
+        },
+      });
+    }
+
+    // Update username if provided
+    if (username && username !== user.username) {
+      const existingUsername = await User.findOne({ username, _id: { $ne: userId } });
+      if (existingUsername) {
+        return res.status(409).json({
+          error: {
+            code: "409",
+            message: "Username is already taken",
+          },
+        });
+      }
+      user.username = username;
+    }
+
+    // Update email if provided
+    if (email && email !== user.email) {
+      const existingEmail = await User.findOne({ email, _id: { $ne: userId } });
+      if (existingEmail) {
+        return res.status(409).json({
+          error: {
+            code: "409",
+            message: "Email is already registered",
+          },
+        });
+      }
+      user.email = email.toLowerCase().trim();
+    }
+
+    // Update password if provided
+    if (password) {
+      if (!currentPassword) {
+        return res.status(400).json({
+          error: {
+            code: "400",
+            message: "Current password is required to change password",
+          },
+        });
+      }
+
+      // Verify current password
+      const isPasswordValid = await user.comparePassword(currentPassword);
+      if (!isPasswordValid) {
+        return res.status(401).json({
+          error: {
+            code: "401",
+            message: "Current password is incorrect",
+          },
+        });
+      }
+
+      if (password.length < 6) {
+        return res.status(400).json({
+          error: {
+            code: "400",
+            message: "New password must be at least 6 characters",
+          },
+        });
+      }
+
+      user.password = password; // Will be hashed by pre-save hook
+    }
+
+    await user.save();
+
+    res.status(200).json({
+      message: "Profile updated successfully",
+      user: {
+        id: user._id.toString(),
+        username: user.username,
+        email: user.email,
+        userType: user.userType,
+        updatedAt: user.updatedAt,
+      },
+    });
+  } catch (error) {
+    console.error("Update profile error:", error);
+    res.status(500).json({
+      error: {
+        code: "500",
+        message: error.message || "Failed to update profile",
+      },
+    });
+  }
+};
+
 // DELETE /auth/users/:id - Delete a user
 exports.deleteUser = async (req, res, next) => {
   try {
