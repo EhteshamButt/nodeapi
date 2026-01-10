@@ -463,4 +463,326 @@ exports.getRecentActivity = async (req, res, next) => {
   }
 };
 
+// GET /auth/users - Get all non-admin users
+exports.getAllUsers = async (req, res, next) => {
+  try {
+    const { search, page = 1, limit = 100 } = req.query;
+    const query = { userType: { $ne: 'admin' } };
+
+    // Add search filter if provided
+    if (search) {
+      query.$or = [
+        { username: { $regex: search, $options: 'i' } },
+        { email: { $regex: search, $options: 'i' } },
+      ];
+    }
+
+    // Pagination
+    const skip = (parseInt(page) - 1) * parseInt(limit);
+
+    const users = await User.find(query)
+      .select('-password -resetPasswordToken -resetPasswordExpires')
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(parseInt(limit))
+      .lean();
+
+    const total = await User.countDocuments(query);
+
+    // Calculate stats
+    const now = new Date();
+    const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+    
+    const totalUsers = await User.countDocuments({ userType: { $ne: 'admin' } });
+    const activeSubscriptions = await User.countDocuments({
+      userType: { $ne: 'admin' },
+      subscriptionStatus: 'active',
+      subscriptionExpiryDate: { $gt: now },
+    });
+    const freeUsers = await User.countDocuments({
+      userType: { $ne: 'admin' },
+      paymentStatus: false,
+    });
+    const newThisMonth = await User.countDocuments({
+      userType: { $ne: 'admin' },
+      createdAt: { $gte: startOfMonth },
+    });
+
+    res.status(200).json({
+      message: "Users retrieved successfully",
+      users: users.map(user => ({
+        id: user._id.toString(),
+        username: user.username,
+        email: user.email,
+        paymentStatus: user.paymentStatus || false,
+        subscriptionStatus: user.subscriptionStatus || 'none',
+        subscriptionExpiryDate: user.subscriptionExpiryDate || null,
+        paymentDate: user.paymentDate || null,
+        createdAt: user.createdAt,
+        updatedAt: user.updatedAt,
+      })),
+      stats: {
+        totalUsers,
+        activeSubscriptions,
+        freeUsers,
+        newThisMonth,
+      },
+      pagination: {
+        page: parseInt(page),
+        limit: parseInt(limit),
+        total,
+        pages: Math.ceil(total / parseInt(limit)),
+      },
+    });
+  } catch (error) {
+    console.error("Get all users error:", error);
+    res.status(500).json({
+      error: {
+        code: "500",
+        message: error.message || "Failed to retrieve users",
+      },
+    });
+  }
+};
+
+// POST /auth/users - Create a new non-admin user
+exports.createUser = async (req, res, next) => {
+  try {
+    const { username, email, password } = req.body;
+
+    if (!username || !email || !password) {
+      return res.status(400).json({
+        error: {
+          code: "400",
+          message: "Username, email and password are required",
+        },
+      });
+    }
+
+    // Check for existing email
+    const existingEmail = await User.findOne({ email });
+    if (existingEmail) {
+      return res.status(409).json({
+        error: {
+          code: "409",
+          message: "Email is already registered",
+        },
+      });
+    }
+
+    // Check for existing username
+    const existingUsername = await User.findOne({ username });
+    if (existingUsername) {
+      return res.status(409).json({
+        error: {
+          code: "409",
+          message: "Username is already taken",
+        },
+      });
+    }
+
+    // Create user with userType 'user' (not admin)
+    const user = await User.create({
+      username,
+      email,
+      password,
+      userType: 'user', // Always create as regular user, not admin
+    });
+
+    res.status(201).json({
+      message: "User created successfully",
+      user: {
+        id: user._id.toString(),
+        username: user.username,
+        email: user.email,
+        userType: user.userType,
+        paymentStatus: user.paymentStatus || false,
+        subscriptionStatus: user.subscriptionStatus || 'none',
+        createdAt: user.createdAt,
+      },
+    });
+  } catch (error) {
+    console.error("Create user error:", error);
+    
+    if (error.code === 11000) {
+      const field = Object.keys(error.keyPattern)[0];
+      const message = field === "email" 
+        ? "Email is already registered"
+        : field === "username"
+        ? "Username is already taken"
+        : `${field} already exists`;
+      return res.status(409).json({
+        error: {
+          code: "409",
+          message: message,
+        },
+      });
+    }
+
+    if (error.name === "ValidationError") {
+      const messages = Object.values(error.errors).map((err) => err.message);
+      return res.status(400).json({
+        error: {
+          code: "400",
+          message: messages.join(", "),
+        },
+      });
+    }
+
+    res.status(500).json({
+      error: {
+        code: "500",
+        message: error.message || "Failed to create user",
+      },
+    });
+  }
+};
+
+// PUT /auth/users/:id - Update a user
+exports.updateUser = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const { paymentStatus, subscriptionStatus, subscriptionExpiryDate, paymentDate } = req.body;
+
+    if (!id) {
+      return res.status(400).json({
+        error: {
+          code: "400",
+          message: "User ID is required",
+        },
+      });
+    }
+
+    const user = await User.findById(id);
+
+    if (!user) {
+      return res.status(404).json({
+        error: {
+          code: "404",
+          message: "User not found",
+        },
+      });
+    }
+
+    // Prevent updating admin users from this endpoint
+    if (user.userType === 'admin') {
+      return res.status(403).json({
+        error: {
+          code: "403",
+          message: "Cannot update admin users from this endpoint",
+        },
+      });
+    }
+
+    // Update allowed fields
+    if (paymentStatus !== undefined) {
+      user.paymentStatus = paymentStatus;
+    }
+    if (subscriptionStatus !== undefined) {
+      user.subscriptionStatus = subscriptionStatus;
+    }
+    if (subscriptionExpiryDate !== undefined) {
+      user.subscriptionExpiryDate = subscriptionExpiryDate ? new Date(subscriptionExpiryDate) : null;
+    }
+    if (paymentDate !== undefined) {
+      user.paymentDate = paymentDate ? new Date(paymentDate) : null;
+    }
+
+    // If setting paymentStatus to true and no paymentDate, set it to now
+    if (user.paymentStatus && !user.paymentDate) {
+      user.paymentDate = new Date();
+      // Set subscription expiry to 1 year from now if not set
+      if (!user.subscriptionExpiryDate) {
+        const expiryDate = new Date(user.paymentDate);
+        expiryDate.setFullYear(expiryDate.getFullYear() + 1);
+        user.subscriptionExpiryDate = expiryDate;
+      }
+      // Set subscription status to active if not set
+      if (!user.subscriptionStatus || user.subscriptionStatus === 'none') {
+        user.subscriptionStatus = 'active';
+      }
+    }
+
+    await user.save();
+
+    res.status(200).json({
+      message: "User updated successfully",
+      user: {
+        id: user._id.toString(),
+        username: user.username,
+        email: user.email,
+        paymentStatus: user.paymentStatus,
+        subscriptionStatus: user.subscriptionStatus,
+        subscriptionExpiryDate: user.subscriptionExpiryDate,
+        paymentDate: user.paymentDate,
+        updatedAt: user.updatedAt,
+      },
+    });
+  } catch (error) {
+    console.error("Update user error:", error);
+    res.status(500).json({
+      error: {
+        code: "500",
+        message: error.message || "Failed to update user",
+      },
+    });
+  }
+};
+
+// DELETE /auth/users/:id - Delete a user
+exports.deleteUser = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+
+    if (!id) {
+      return res.status(400).json({
+        error: {
+          code: "400",
+          message: "User ID is required",
+        },
+      });
+    }
+
+    const user = await User.findById(id);
+
+    if (!user) {
+      return res.status(404).json({
+        error: {
+          code: "404",
+          message: "User not found",
+        },
+      });
+    }
+
+    // Prevent deleting admin users from this endpoint
+    if (user.userType === 'admin') {
+      return res.status(403).json({
+        error: {
+          code: "403",
+          message: "Cannot delete admin users from this endpoint",
+        },
+      });
+    }
+
+    await User.findByIdAndDelete(id);
+
+    res.status(200).json({
+      message: "User deleted successfully",
+      deletedUser: {
+        id: user._id.toString(),
+        username: user.username,
+        email: user.email,
+      },
+    });
+  } catch (error) {
+    console.error("Delete user error:", error);
+    res.status(500).json({
+      error: {
+        code: "500",
+        message: error.message || "Failed to delete user",
+      },
+    });
+  }
+};
+
 

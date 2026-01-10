@@ -10,6 +10,10 @@ router.get("/admins", authController.getAllAdmins);
 router.delete("/admins/:id", authController.deleteAdmin);
 router.get("/stats", authController.getAdminStats);
 router.get("/recent-activity", authController.getRecentActivity);
+router.get("/users", authController.getAllUsers);
+router.post("/users", authController.createUser);
+router.put("/users/:id", authController.updateUser);
+router.delete("/users/:id", authController.deleteUser);
 
 module.exports = router;
 
