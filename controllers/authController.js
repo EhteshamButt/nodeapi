@@ -295,4 +295,172 @@ exports.deleteAdmin = async (req, res, next) => {
   }
 };
 
+// GET /auth/stats - Get admin dashboard statistics
+exports.getAdminStats = async (req, res, next) => {
+  try {
+    const now = new Date();
+    const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+    const startOfLastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+    const endOfLastMonth = new Date(now.getFullYear(), now.getMonth(), 0);
+
+    // Total users (excluding admins)
+    const totalUsers = await User.countDocuments({ userType: { $ne: 'admin' } });
+
+    // Active subscriptions
+    const activeSubscriptions = await User.countDocuments({
+      subscriptionStatus: 'active',
+      subscriptionExpiryDate: { $gt: now },
+      userType: { $ne: 'admin' },
+    });
+
+    // Total revenue (from all paid users)
+    const paidUsers = await User.find({
+      paymentStatus: true,
+      paymentDate: { $exists: true },
+      userType: { $ne: 'admin' },
+    }).select('paymentDate');
+
+    // Calculate total revenue (assuming £19.99 per payment)
+    const PAYMENT_AMOUNT = 19.99;
+    const totalRevenue = paidUsers.length * PAYMENT_AMOUNT;
+
+    // Monthly revenue (payments made this month)
+    const monthlyPaidUsers = paidUsers.filter(user => {
+      const paymentDate = new Date(user.paymentDate);
+      return paymentDate >= startOfMonth;
+    });
+    const monthlyRevenue = monthlyPaidUsers.length * PAYMENT_AMOUNT;
+
+    // Calculate percentage changes (comparing to last month)
+    const lastMonthPaidUsers = await User.countDocuments({
+      paymentStatus: true,
+      paymentDate: { $gte: startOfLastMonth, $lte: endOfLastMonth },
+      userType: { $ne: 'admin' },
+    });
+    const lastMonthActive = await User.countDocuments({
+      subscriptionStatus: 'active',
+      subscriptionExpiryDate: { $gt: endOfLastMonth, $lte: startOfMonth },
+      userType: { $ne: 'admin' },
+    });
+
+    const userChange = lastMonthPaidUsers > 0 
+      ? (((totalUsers - lastMonthPaidUsers) / lastMonthPaidUsers) * 100).toFixed(0)
+      : '0';
+    const subscriptionChange = lastMonthActive > 0
+      ? (((activeSubscriptions - lastMonthActive) / lastMonthActive) * 100).toFixed(0)
+      : '0';
+    const revenueChange = lastMonthPaidUsers > 0
+      ? (((monthlyRevenue - (lastMonthPaidUsers * PAYMENT_AMOUNT)) / (lastMonthPaidUsers * PAYMENT_AMOUNT)) * 100).toFixed(0)
+      : '0';
+
+    res.status(200).json({
+      message: "Stats retrieved successfully",
+      stats: {
+        totalUsers,
+        activeSubscriptions,
+        totalRevenue: Math.round(totalRevenue * 100) / 100,
+        monthlyRevenue: Math.round(monthlyRevenue * 100) / 100,
+        changes: {
+          users: userChange > 0 ? `+${userChange}%` : `${userChange}%`,
+          subscriptions: subscriptionChange > 0 ? `+${subscriptionChange}%` : `${subscriptionChange}%`,
+          revenue: revenueChange > 0 ? `+${revenueChange}%` : `${revenueChange}%`,
+          monthlyRevenue: revenueChange > 0 ? `+${revenueChange}%` : `${revenueChange}%`,
+        },
+      },
+    });
+  } catch (error) {
+    console.error("Get admin stats error:", error);
+    res.status(500).json({
+      error: {
+        code: "500",
+        message: error.message || "Failed to retrieve stats",
+      },
+    });
+  }
+};
+
+// GET /auth/recent-activity - Get recent activity
+exports.getRecentActivity = async (req, res, next) => {
+  try {
+    const Code = require("../models/Code");
+    
+    // Get recent codes created (last 5)
+    const recentCodes = await Code.find()
+      .sort({ createdAt: -1 })
+      .limit(3)
+      .select('code createdAt')
+      .lean();
+
+    // Get recent payments (last 5)
+    const recentPayments = await User.find({
+      paymentStatus: true,
+      paymentDate: { $exists: true },
+      userType: { $ne: 'admin' },
+    })
+      .sort({ paymentDate: -1 })
+      .limit(3)
+      .select('username email paymentDate')
+      .lean();
+
+    // Get recent user registrations (last 5)
+    const recentUsers = await User.find({
+      userType: { $ne: 'admin' },
+    })
+      .sort({ createdAt: -1 })
+      .limit(3)
+      .select('username email createdAt')
+      .lean();
+
+    // Format activities
+    const activities = [];
+
+    // Add code activities
+    recentCodes.forEach(code => {
+      activities.push({
+        type: 'code',
+        message: `New discount code created: ${code.code}`,
+        timestamp: code.createdAt,
+        icon: 'add',
+      });
+    });
+
+    // Add payment activities
+    recentPayments.forEach(payment => {
+      activities.push({
+        type: 'payment',
+        message: `Payment processed for ${payment.username || payment.email}`,
+        timestamp: payment.paymentDate,
+        icon: 'check',
+      });
+    });
+
+    // Add user activities
+    recentUsers.forEach(user => {
+      activities.push({
+        type: 'user',
+        message: `New user registered: ${user.username}`,
+        timestamp: user.createdAt,
+        icon: 'user',
+      });
+    });
+
+    // Sort by timestamp (most recent first) and limit to 5
+    activities.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+    const recentActivities = activities.slice(0, 5);
+
+    res.status(200).json({
+      message: "Recent activity retrieved successfully",
+      activities: recentActivities,
+    });
+  } catch (error) {
+    console.error("Get recent activity error:", error);
+    res.status(500).json({
+      error: {
+        code: "500",
+        message: error.message || "Failed to retrieve recent activity",
+      },
+    });
+  }
+};
+
 

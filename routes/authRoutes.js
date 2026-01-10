@@ -8,6 +8,8 @@ router.post("/forgot-password", authController.forgotPassword);
 router.post("/reset-password", authController.resetPassword);
 router.get("/admins", authController.getAllAdmins);
 router.delete("/admins/:id", authController.deleteAdmin);
+router.get("/stats", authController.getAdminStats);
+router.get("/recent-activity", authController.getRecentActivity);
 
 module.exports = router;
 
