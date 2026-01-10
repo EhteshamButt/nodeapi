@@ -7,12 +7,19 @@ const sendEmail = require("../utils/email");
 // POST /auth/signup
 exports.signup = async (req, res, next) => {
   try {
-    const { username, email, password } = req.body;
+    const { username, email, password, userType } = req.body;
 
     if (!username || !email || !password) {
       return res
         .status(400)
         .json({ message: "Username, email and password are required" });
+    }
+
+    // Validate userType if provided
+    if (userType && !["user", "admin"].includes(userType)) {
+      return res
+        .status(400)
+        .json({ message: "userType must be either 'user' or 'admin'" });
     }
 
     // Check for existing email
@@ -27,7 +34,13 @@ exports.signup = async (req, res, next) => {
       return res.status(409).json({ message: "Username is already taken" });
     }
 
-    const user = await User.create({ username, email, password });
+    // Create user with userType (defaults to 'user' if not provided)
+    const userData = { username, email, password };
+    if (userType) {
+      userData.userType = userType;
+    }
+
+    const user = await User.create(userData);
     const token = generateToken(user._id.toString());
 
     res.status(201).json({
@@ -37,6 +50,7 @@ exports.signup = async (req, res, next) => {
         id: user._id.toString(),
         username: user.username,
         email: user.email,
+        userType: user.userType || "user",
       },
     });
   } catch (error) {
@@ -191,6 +205,93 @@ exports.resetPassword = async (req, res, next) => {
     res.status(200).json({ message: "Password has been reset successfully" });
   } catch (error) {
     next(error);
+  }
+};
+
+// GET /auth/admins - Get all admin users
+exports.getAllAdmins = async (req, res, next) => {
+  try {
+    const admins = await User.find({ userType: 'admin' })
+      .select('-password -resetPasswordToken -resetPasswordExpires')
+      .sort({ createdAt: -1 })
+      .lean();
+
+    res.status(200).json({
+      message: "Admins retrieved successfully",
+      admins: admins.map(admin => ({
+        id: admin._id.toString(),
+        username: admin.username,
+        email: admin.email,
+        userType: admin.userType || 'admin',
+        createdAt: admin.createdAt,
+        updatedAt: admin.updatedAt,
+      })),
+      total: admins.length,
+    });
+  } catch (error) {
+    console.error("Get all admins error:", error);
+    res.status(500).json({
+      error: {
+        code: "500",
+        message: error.message || "Failed to retrieve admins",
+      },
+    });
+  }
+};
+
+// DELETE /auth/admins/:id - Delete an admin
+exports.deleteAdmin = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+
+    if (!id) {
+      return res.status(400).json({
+        error: {
+          code: "400",
+          message: "Admin ID is required",
+        },
+      });
+    }
+
+    const admin = await User.findById(id);
+
+    if (!admin) {
+      return res.status(404).json({
+        error: {
+          code: "404",
+          message: "Admin not found",
+        },
+      });
+    }
+
+    // Check if it's actually an admin
+    if (admin.userType !== 'admin') {
+      return res.status(400).json({
+        error: {
+          code: "400",
+          message: "User is not an admin",
+        },
+      });
+    }
+
+    await User.findByIdAndDelete(id);
+
+    res.status(200).json({
+      message: "Admin deleted successfully",
+      deletedAdmin: {
+        id: admin._id.toString(),
+        username: admin.username,
+        email: admin.email,
+      },
+    });
+  } catch (error) {
+    console.error("Delete admin error:", error);
+    res.status(500).json({
+      error: {
+        code: "500",
+        message: error.message || "Failed to delete admin",
+      },
+    });
   }
 };
 

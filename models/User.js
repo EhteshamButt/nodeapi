@@ -36,6 +36,11 @@ const userSchema = new mongoose.Schema(
       enum: ["active", "expired", "none"],
       default: "none",
     },
+    userType: {
+      type: String,
+      enum: ["user", "admin"],
+      default: "user",
+    },
   },
   { timestamps: true }
 );
