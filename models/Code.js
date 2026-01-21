@@ -2,7 +2,7 @@ const mongoose = require("mongoose");
 
 const codeSchema = new mongoose.Schema(
   {
-    // Base price for calculations (default: £19.99)
+    // Base price (default: £19.99)
     totalAmount: {
       type: Number,
       default: 19.99,
@@ -26,10 +26,10 @@ const codeSchema = new mongoose.Schema(
       min: 0,
       max: 100, // Discount percentage (0-100)
     },
-    // Amount after applying discount to totalAmount (e.g., 19.99 - discount%)
+    // Wallet commission/payout amount for the assigned wallet user (NOT derived from discount)
     walletAmount: {
       type: Number,
-      default: 19.99,
+      default: 0,
       min: 0,
     },
     isActive: {

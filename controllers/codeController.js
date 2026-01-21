@@ -4,11 +4,6 @@ const User = require("../models/User");
 
 const BASE_TOTAL_AMOUNT = 19.99;
 const roundMoney = (n) => Math.round(n * 100) / 100;
-const calcWalletAmount = (discountPercent) => {
-  const pct = typeof discountPercent === "number" ? discountPercent : 0;
-  const discounted = BASE_TOTAL_AMOUNT - (BASE_TOTAL_AMOUNT * pct) / 100;
-  return roundMoney(Math.max(0, discounted));
-};
 
 // Set CORS headers helper
 const setCorsHeaders = (res) => {
@@ -22,7 +17,7 @@ exports.createCode = async (req, res, next) => {
   setCorsHeaders(res);
 
   try {
-    const { code, description, discount, isActive, walletUserId } = req.body;
+    const { code, description, discount, isActive, walletUserId, walletAmount } = req.body;
 
     if (!code) {
       return res.status(400).json({
@@ -60,6 +55,18 @@ exports.createCode = async (req, res, next) => {
       }
     }
 
+    // Validate and parse walletAmount (commission/payout) if provided
+    let walletAmountValue = 0;
+    if (walletAmount !== undefined && walletAmount !== null && walletAmount !== "") {
+      walletAmountValue = typeof walletAmount === "string" ? parseFloat(walletAmount) : Number(walletAmount);
+      if (isNaN(walletAmountValue) || walletAmountValue < 0) {
+        return res.status(400).json({
+          error: { code: "400", message: "Wallet amount must be a number greater than or equal to 0" },
+        });
+      }
+      walletAmountValue = roundMoney(walletAmountValue);
+    }
+
     // Create code object with explicit discount field - ALWAYS set it
     const codeData = {
       code: code.trim(),
@@ -67,7 +74,7 @@ exports.createCode = async (req, res, next) => {
       discount: discountValue, // Always set explicitly, even if 0
       isActive: isActive !== undefined ? isActive : true,
       totalAmount: BASE_TOTAL_AMOUNT,
-      walletAmount: calcWalletAmount(discountValue),
+      walletAmount: walletAmountValue,
     };
 
     // If wallet user selected, validate and link it
@@ -100,7 +107,7 @@ exports.createCode = async (req, res, next) => {
     const codeResponse = populated || newCode.toObject();
     if (codeResponse.discount === undefined || codeResponse.discount === null) codeResponse.discount = discountValue;
     if (codeResponse.totalAmount === undefined || codeResponse.totalAmount === null) codeResponse.totalAmount = BASE_TOTAL_AMOUNT;
-    if (codeResponse.walletAmount === undefined || codeResponse.walletAmount === null) codeResponse.walletAmount = calcWalletAmount(codeResponse.discount || 0);
+    if (codeResponse.walletAmount === undefined || codeResponse.walletAmount === null) codeResponse.walletAmount = walletAmountValue;
 
     res.status(201).json({
       message: "Code created successfully",
@@ -157,7 +164,7 @@ exports.getAllCodes = async (req, res, next) => {
         codeObj.totalAmount = BASE_TOTAL_AMOUNT;
       }
       if (codeObj.walletAmount === undefined || codeObj.walletAmount === null || isNaN(codeObj.walletAmount)) {
-        codeObj.walletAmount = calcWalletAmount(codeObj.discount);
+        codeObj.walletAmount = 0;
       }
       return codeObj;
     });
@@ -222,7 +229,7 @@ exports.getCodeById = async (req, res, next) => {
       codeWithDiscount.totalAmount = BASE_TOTAL_AMOUNT;
     }
     if (codeWithDiscount.walletAmount === undefined || codeWithDiscount.walletAmount === null || isNaN(codeWithDiscount.walletAmount)) {
-      codeWithDiscount.walletAmount = calcWalletAmount(codeWithDiscount.discount);
+      codeWithDiscount.walletAmount = 0;
     }
 
     res.status(200).json({
@@ -281,7 +288,7 @@ exports.getCodeByCode = async (req, res, next) => {
       codeWithDiscount.totalAmount = BASE_TOTAL_AMOUNT;
     }
     if (codeWithDiscount.walletAmount === undefined || codeWithDiscount.walletAmount === null || isNaN(codeWithDiscount.walletAmount)) {
-      codeWithDiscount.walletAmount = calcWalletAmount(codeWithDiscount.discount);
+      codeWithDiscount.walletAmount = 0;
     }
 
     res.status(200).json({
@@ -306,7 +313,7 @@ exports.updateCode = async (req, res, next) => {
 
   try {
     const { id } = req.params;
-    const { code, description, discount, isActive } = req.body;
+    const { code, description, discount, isActive, walletAmount } = req.body;
 
     if (!mongoose.Types.ObjectId.isValid(id)) {
       return res.status(400).json({
@@ -350,7 +357,15 @@ exports.updateCode = async (req, res, next) => {
       }
       updateData.discount = discount;
       updateData.totalAmount = BASE_TOTAL_AMOUNT;
-      updateData.walletAmount = calcWalletAmount(discount);
+    }
+    if (walletAmount !== undefined) {
+      const walletAmountValue = typeof walletAmount === "string" ? parseFloat(walletAmount) : Number(walletAmount);
+      if (isNaN(walletAmountValue) || walletAmountValue < 0) {
+        return res.status(400).json({
+          error: { code: "400", message: "Wallet amount must be a number greater than or equal to 0" },
+        });
+      }
+      updateData.walletAmount = roundMoney(walletAmountValue);
     }
     if (isActive !== undefined) {
       updateData.isActive = isActive;
@@ -383,7 +398,7 @@ exports.updateCode = async (req, res, next) => {
       codeWithDiscount.totalAmount = BASE_TOTAL_AMOUNT;
     }
     if (codeWithDiscount.walletAmount === undefined || codeWithDiscount.walletAmount === null || isNaN(codeWithDiscount.walletAmount)) {
-      codeWithDiscount.walletAmount = calcWalletAmount(codeWithDiscount.discount);
+      codeWithDiscount.walletAmount = 0;
     }
 
     res.status(200).json({
