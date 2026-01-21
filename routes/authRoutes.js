@@ -14,6 +14,9 @@ router.get("/users", authController.getAllUsers);
 router.post("/users", authController.createUser);
 router.put("/users/:id", authController.updateUser);
 router.delete("/users/:id", authController.deleteUser);
+router.get("/wallet-users", authController.getAllWalletUsers);
+router.post("/wallet-users", authController.createWalletUser);
+router.delete("/wallet-users/:id", authController.deleteWalletUser);
 router.put("/profile", authController.updateProfile);
 
 module.exports = router;

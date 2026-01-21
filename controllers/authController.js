@@ -16,10 +16,10 @@ exports.signup = async (req, res, next) => {
     }
 
     // Validate userType if provided
-    if (userType && !["user", "admin"].includes(userType)) {
+    if (userType && !["user", "admin", "wallet"].includes(userType)) {
       return res
         .status(400)
-        .json({ message: "userType must be either 'user' or 'admin'" });
+        .json({ message: "userType must be either 'user', 'admin' or 'wallet'" });
     }
 
     // Check for existing email
@@ -474,11 +474,151 @@ exports.getRecentActivity = async (req, res, next) => {
   }
 };
 
+// GET /auth/wallet-users - Get all wallet users
+exports.getAllWalletUsers = async (req, res, next) => {
+  try {
+    const { search, page = 1, limit = 100 } = req.query;
+    const query = { userType: 'wallet' };
+
+    if (search) {
+      query.$or = [
+        { username: { $regex: search, $options: 'i' } },
+        { email: { $regex: search, $options: 'i' } },
+      ];
+    }
+
+    const skip = (parseInt(page) - 1) * parseInt(limit);
+
+    const users = await User.find(query)
+      .select('-password -resetPasswordToken -resetPasswordExpires')
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(parseInt(limit))
+      .lean();
+
+    const total = await User.countDocuments(query);
+
+    res.status(200).json({
+      message: "Wallet users retrieved successfully",
+      users: users.map(user => ({
+        id: user._id.toString(),
+        username: user.username,
+        email: user.email,
+        userType: user.userType || 'wallet',
+        createdAt: user.createdAt,
+        updatedAt: user.updatedAt,
+      })),
+      total,
+      pagination: {
+        page: parseInt(page),
+        limit: parseInt(limit),
+        total,
+        pages: Math.ceil(total / parseInt(limit)),
+      },
+    });
+  } catch (error) {
+    console.error("Get wallet users error:", error);
+    res.status(500).json({
+      error: {
+        code: "500",
+        message: error.message || "Failed to retrieve wallet users",
+      },
+    });
+  }
+};
+
+// POST /auth/wallet-users - Create wallet user
+exports.createWalletUser = async (req, res, next) => {
+  try {
+    const { username, email, password } = req.body;
+
+    if (!username || !email || !password) {
+      return res.status(400).json({
+        error: {
+          code: "400",
+          message: "Username, email and password are required",
+        },
+      });
+    }
+
+    const existingEmail = await User.findOne({ email });
+    if (existingEmail) {
+      return res.status(409).json({
+        error: { code: "409", message: "Email is already registered" },
+      });
+    }
+
+    const existingUsername = await User.findOne({ username });
+    if (existingUsername) {
+      return res.status(409).json({
+        error: { code: "409", message: "Username is already taken" },
+      });
+    }
+
+    const user = await User.create({
+      username,
+      email,
+      password,
+      userType: 'wallet',
+    });
+
+    res.status(201).json({
+      message: "Wallet user created successfully",
+      user: {
+        id: user._id.toString(),
+        username: user.username,
+        email: user.email,
+        userType: user.userType || 'wallet',
+        createdAt: user.createdAt,
+        updatedAt: user.updatedAt,
+      },
+    });
+  } catch (error) {
+    console.error("Create wallet user error:", error);
+    res.status(500).json({
+      error: { code: "500", message: error.message || "Failed to create wallet user" },
+    });
+  }
+};
+
+// DELETE /auth/wallet-users/:id - Delete wallet user
+exports.deleteWalletUser = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const user = await User.findById(id);
+
+    if (!user) {
+      return res.status(404).json({
+        error: { code: "404", message: "User not found" },
+      });
+    }
+
+    if (user.userType !== 'wallet') {
+      return res.status(403).json({
+        error: { code: "403", message: "Only wallet users can be deleted from this endpoint" },
+      });
+    }
+
+    await User.findByIdAndDelete(id);
+
+    res.status(200).json({
+      message: "Wallet user deleted successfully",
+      deletedUser: { id: user._id.toString(), email: user.email },
+    });
+  } catch (error) {
+    console.error("Delete wallet user error:", error);
+    res.status(500).json({
+      error: { code: "500", message: error.message || "Failed to delete wallet user" },
+    });
+  }
+};
+
 // GET /auth/users - Get all non-admin users
 exports.getAllUsers = async (req, res, next) => {
   try {
     const { search, page = 1, limit = 100 } = req.query;
-    const query = { userType: { $ne: 'admin' } };
+    // "Users" tab should only include regular users (exclude admins and wallet accounts)
+    const query = { userType: { $nin: ['admin', 'wallet'] } };
 
     // Add search filter if provided
     if (search) {
@@ -504,18 +644,18 @@ exports.getAllUsers = async (req, res, next) => {
     const now = new Date();
     const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
     
-    const totalUsers = await User.countDocuments({ userType: { $ne: 'admin' } });
+    const totalUsers = await User.countDocuments({ userType: { $nin: ['admin', 'wallet'] } });
     const activeSubscriptions = await User.countDocuments({
-      userType: { $ne: 'admin' },
+      userType: { $nin: ['admin', 'wallet'] },
       subscriptionStatus: 'active',
       subscriptionExpiryDate: { $gt: now },
     });
     const freeUsers = await User.countDocuments({
-      userType: { $ne: 'admin' },
+      userType: { $nin: ['admin', 'wallet'] },
       paymentStatus: false,
     });
     const newThisMonth = await User.countDocuments({
-      userType: { $ne: 'admin' },
+      userType: { $nin: ['admin', 'wallet'] },
       createdAt: { $gte: startOfMonth },
     });
 
