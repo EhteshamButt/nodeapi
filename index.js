@@ -8,6 +8,7 @@ const codeRoutes = require("./routes/codeRoutes");
 const couponRoutes = require("./routes/couponRoutes");
 const subscriptionRoutes = require("./routes/subscriptionRoutes");
 const leadRoutes = require("./routes/leadRoutes");
+const walletRoutes = require("./routes/walletRoutes");
 const paymentController = require("./controllers/paymentController");
 const { expireSubscriptions } = require("./utils/expireSubscriptions");
 
@@ -78,6 +79,7 @@ app.use("/codes", codeRoutes);
 app.use("/coupon", couponRoutes);
 app.use("/subscription", subscriptionRoutes);
 app.use("/leads", leadRoutes);
+app.use("/wallet", walletRoutes);
 
 app.get("/", (req, res) => {
   res.send(`App is working fine`);

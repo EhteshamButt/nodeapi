@@ -41,6 +41,11 @@ const userSchema = new mongoose.Schema(
       enum: ["user", "admin", "wallet"],
       default: "user",
     },
+    walletBalance: {
+      type: Number,
+      default: 0,
+      min: 0,
+    },
   },
   { timestamps: true }
 );

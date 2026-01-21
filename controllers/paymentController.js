@@ -12,6 +12,7 @@ if (process.env.STRIPE_SECRET_KEY) {
 const User = require("../models/User");
 const Code = require("../models/Code");
 const mongoose = require("mongoose");
+const WalletTransaction = require("../models/WalletTransaction");
 
 // Helper function to check and update subscription expiration
 const checkSubscriptionExpiry = async (user) => {
@@ -259,6 +260,7 @@ exports.stripeWebhook = async (req, res, next) => {
         case "checkout.session.completed":
           const session = event.data.object;
           const userId = session.metadata?.userId;
+          const couponCode = session.metadata?.couponCode;
 
           if (userId) {
             const user = await User.findById(userId);
@@ -275,6 +277,54 @@ exports.stripeWebhook = async (req, res, next) => {
               await user.save();
               console.log(`Payment successful for user: ${userId}, expires on: ${expiryDate}`);
             }
+          }
+
+          // Wallet commission credit (once per session)
+          try {
+            if (couponCode && typeof couponCode === "string" && couponCode.trim() !== "") {
+              const existingCredit = await WalletTransaction.findOne({
+                stripeSessionId: session.id,
+                type: "credit",
+              }).lean();
+
+              if (!existingCredit) {
+                const codeDoc = await Code.findOne({
+                  code: { $regex: new RegExp(`^${couponCode.trim()}$`, "i") },
+                }).lean();
+
+                if (codeDoc && codeDoc.assignedTo && (codeDoc.walletAmount || 0) > 0) {
+                  const walletUser = await User.findById(codeDoc.assignedTo);
+                  if (walletUser && (walletUser.userType || "").toLowerCase() === "wallet") {
+                    const paidAmount = typeof session.amount_total === "number" ? session.amount_total / 100 : null;
+                    const creditAmount = Math.round((codeDoc.walletAmount || 0) * 100) / 100;
+
+                    walletUser.walletBalance = Math.round(((walletUser.walletBalance || 0) + creditAmount) * 100) / 100;
+                    await walletUser.save();
+
+                    await WalletTransaction.create({
+                      walletUser: walletUser._id,
+                      type: "credit",
+                      status: "completed",
+                      amount: creditAmount,
+                      currency: (session.currency || "gbp").toLowerCase(),
+                      sourceUser: userId && mongoose.Types.ObjectId.isValid(userId) ? userId : null,
+                      code: codeDoc._id,
+                      codeString: codeDoc.code,
+                      paidAmount,
+                      stripeSessionId: session.id,
+                      note: "Commission credited from discount code usage",
+                    });
+
+                    // Mark code used (optional tracking)
+                    await Code.findByIdAndUpdate(codeDoc._id, {
+                      $set: { usedBy: userId, usedAt: new Date() },
+                    }).catch(() => {});
+                  }
+                }
+              }
+            }
+          } catch (walletErr) {
+            console.error("Wallet credit error (non-fatal):", walletErr);
           }
           break;
 

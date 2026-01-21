@@ -3,6 +3,7 @@ const mongoose = require("mongoose");
 const User = require("../models/User");
 
 const BASE_TOTAL_AMOUNT = 19.99;
+const MAX_WALLET_PAYOUT = 18;
 const roundMoney = (n) => Math.round(n * 100) / 100;
 
 // Set CORS headers helper
@@ -59,9 +60,9 @@ exports.createCode = async (req, res, next) => {
     let walletAmountValue = 0;
     if (walletAmount !== undefined && walletAmount !== null && walletAmount !== "") {
       walletAmountValue = typeof walletAmount === "string" ? parseFloat(walletAmount) : Number(walletAmount);
-      if (isNaN(walletAmountValue) || walletAmountValue < 0) {
+      if (isNaN(walletAmountValue) || walletAmountValue < 0 || walletAmountValue > MAX_WALLET_PAYOUT) {
         return res.status(400).json({
-          error: { code: "400", message: "Wallet amount must be a number greater than or equal to 0" },
+          error: { code: "400", message: `Wallet amount must be between 0 and ${MAX_WALLET_PAYOUT}` },
         });
       }
       walletAmountValue = roundMoney(walletAmountValue);
@@ -360,9 +361,9 @@ exports.updateCode = async (req, res, next) => {
     }
     if (walletAmount !== undefined) {
       const walletAmountValue = typeof walletAmount === "string" ? parseFloat(walletAmount) : Number(walletAmount);
-      if (isNaN(walletAmountValue) || walletAmountValue < 0) {
+      if (isNaN(walletAmountValue) || walletAmountValue < 0 || walletAmountValue > MAX_WALLET_PAYOUT) {
         return res.status(400).json({
-          error: { code: "400", message: "Wallet amount must be a number greater than or equal to 0" },
+          error: { code: "400", message: `Wallet amount must be between 0 and ${MAX_WALLET_PAYOUT}` },
         });
       }
       updateData.walletAmount = roundMoney(walletAmountValue);
