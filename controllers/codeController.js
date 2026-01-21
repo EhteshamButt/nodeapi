@@ -2,6 +2,14 @@ const Code = require("../models/Code");
 const mongoose = require("mongoose");
 const User = require("../models/User");
 
+const BASE_TOTAL_AMOUNT = 19.99;
+const roundMoney = (n) => Math.round(n * 100) / 100;
+const calcWalletAmount = (discountPercent) => {
+  const pct = typeof discountPercent === "number" ? discountPercent : 0;
+  const discounted = BASE_TOTAL_AMOUNT - (BASE_TOTAL_AMOUNT * pct) / 100;
+  return roundMoney(Math.max(0, discounted));
+};
+
 // Set CORS headers helper
 const setCorsHeaders = (res) => {
   res.header("Access-Control-Allow-Origin", "*");
@@ -58,6 +66,8 @@ exports.createCode = async (req, res, next) => {
       description: description || "",
       discount: discountValue, // Always set explicitly, even if 0
       isActive: isActive !== undefined ? isActive : true,
+      totalAmount: BASE_TOTAL_AMOUNT,
+      walletAmount: calcWalletAmount(discountValue),
     };
 
     // If wallet user selected, validate and link it
@@ -89,6 +99,8 @@ exports.createCode = async (req, res, next) => {
 
     const codeResponse = populated || newCode.toObject();
     if (codeResponse.discount === undefined || codeResponse.discount === null) codeResponse.discount = discountValue;
+    if (codeResponse.totalAmount === undefined || codeResponse.totalAmount === null) codeResponse.totalAmount = BASE_TOTAL_AMOUNT;
+    if (codeResponse.walletAmount === undefined || codeResponse.walletAmount === null) codeResponse.walletAmount = calcWalletAmount(codeResponse.discount || 0);
 
     res.status(201).json({
       message: "Code created successfully",
@@ -139,6 +151,13 @@ exports.getAllCodes = async (req, res, next) => {
       // ALWAYS include discount - default to 0 if missing
       if (codeObj.discount === undefined || codeObj.discount === null || isNaN(codeObj.discount)) {
         codeObj.discount = 0;
+      }
+      // Ensure totalAmount / walletAmount
+      if (codeObj.totalAmount === undefined || codeObj.totalAmount === null || isNaN(codeObj.totalAmount)) {
+        codeObj.totalAmount = BASE_TOTAL_AMOUNT;
+      }
+      if (codeObj.walletAmount === undefined || codeObj.walletAmount === null || isNaN(codeObj.walletAmount)) {
+        codeObj.walletAmount = calcWalletAmount(codeObj.discount);
       }
       return codeObj;
     });
@@ -199,6 +218,12 @@ exports.getCodeById = async (req, res, next) => {
     if (codeWithDiscount.discount === undefined || codeWithDiscount.discount === null || isNaN(codeWithDiscount.discount)) {
       codeWithDiscount.discount = 0;
     }
+    if (codeWithDiscount.totalAmount === undefined || codeWithDiscount.totalAmount === null || isNaN(codeWithDiscount.totalAmount)) {
+      codeWithDiscount.totalAmount = BASE_TOTAL_AMOUNT;
+    }
+    if (codeWithDiscount.walletAmount === undefined || codeWithDiscount.walletAmount === null || isNaN(codeWithDiscount.walletAmount)) {
+      codeWithDiscount.walletAmount = calcWalletAmount(codeWithDiscount.discount);
+    }
 
     res.status(200).json({
       message: "Code retrieved successfully",
@@ -251,6 +276,12 @@ exports.getCodeByCode = async (req, res, next) => {
     const codeWithDiscount = { ...codeDoc };
     if (codeWithDiscount.discount === undefined || codeWithDiscount.discount === null || isNaN(codeWithDiscount.discount)) {
       codeWithDiscount.discount = 0;
+    }
+    if (codeWithDiscount.totalAmount === undefined || codeWithDiscount.totalAmount === null || isNaN(codeWithDiscount.totalAmount)) {
+      codeWithDiscount.totalAmount = BASE_TOTAL_AMOUNT;
+    }
+    if (codeWithDiscount.walletAmount === undefined || codeWithDiscount.walletAmount === null || isNaN(codeWithDiscount.walletAmount)) {
+      codeWithDiscount.walletAmount = calcWalletAmount(codeWithDiscount.discount);
     }
 
     res.status(200).json({
@@ -318,6 +349,8 @@ exports.updateCode = async (req, res, next) => {
         });
       }
       updateData.discount = discount;
+      updateData.totalAmount = BASE_TOTAL_AMOUNT;
+      updateData.walletAmount = calcWalletAmount(discount);
     }
     if (isActive !== undefined) {
       updateData.isActive = isActive;
@@ -328,7 +361,8 @@ exports.updateCode = async (req, res, next) => {
       { $set: updateData },
       { new: true, runValidators: true }
     )
-      .populate("usedBy", "username email")
+      .populate("usedBy", "username email userType")
+      .populate("assignedTo", "username email userType")
       .lean();
 
     if (!updatedCode) {
@@ -344,6 +378,12 @@ exports.updateCode = async (req, res, next) => {
     const codeWithDiscount = { ...updatedCode };
     if (codeWithDiscount.discount === undefined || codeWithDiscount.discount === null || isNaN(codeWithDiscount.discount)) {
       codeWithDiscount.discount = 0;
+    }
+    if (codeWithDiscount.totalAmount === undefined || codeWithDiscount.totalAmount === null || isNaN(codeWithDiscount.totalAmount)) {
+      codeWithDiscount.totalAmount = BASE_TOTAL_AMOUNT;
+    }
+    if (codeWithDiscount.walletAmount === undefined || codeWithDiscount.walletAmount === null || isNaN(codeWithDiscount.walletAmount)) {
+      codeWithDiscount.walletAmount = calcWalletAmount(codeWithDiscount.discount);
     }
 
     res.status(200).json({
