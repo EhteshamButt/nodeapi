@@ -33,6 +33,12 @@ const codeSchema = new mongoose.Schema(
       type: Date,
       default: null,
     },
+    // Assign this discount code to a specific wallet user (like a join/populate)
+    assignedTo: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+      default: null,
+    },
   },
   { timestamps: true }
 );

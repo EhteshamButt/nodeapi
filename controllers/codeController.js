@@ -1,5 +1,6 @@
 const Code = require("../models/Code");
 const mongoose = require("mongoose");
+const User = require("../models/User");
 
 // Set CORS headers helper
 const setCorsHeaders = (res) => {
@@ -13,7 +14,7 @@ exports.createCode = async (req, res, next) => {
   setCorsHeaders(res);
 
   try {
-    const { code, description, discount, isActive } = req.body;
+    const { code, description, discount, isActive, walletUserId } = req.body;
 
     if (!code) {
       return res.status(400).json({
@@ -59,14 +60,35 @@ exports.createCode = async (req, res, next) => {
       isActive: isActive !== undefined ? isActive : true,
     };
 
-    const newCode = await Code.create(codeData);
-
-    // Convert to plain object - toObject() will apply the transform
-    const codeResponse = newCode.toObject();
-    // Double-check: ALWAYS set discount - never let it be undefined
-    if (codeResponse.discount === undefined || codeResponse.discount === null) {
-      codeResponse.discount = discountValue;
+    // If wallet user selected, validate and link it
+    if (walletUserId) {
+      if (!mongoose.Types.ObjectId.isValid(walletUserId)) {
+        return res.status(400).json({
+          error: { code: "400", message: "Invalid wallet user ID format" },
+        });
+      }
+      const walletUser = await User.findById(walletUserId).lean();
+      if (!walletUser) {
+        return res.status(404).json({
+          error: { code: "404", message: "Wallet user not found" },
+        });
+      }
+      if (walletUser.userType !== "wallet") {
+        return res.status(400).json({
+          error: { code: "400", message: "Selected user is not a wallet account" },
+        });
+      }
+      codeData.assignedTo = walletUser._id;
     }
+
+    const newCode = await Code.create(codeData);
+    const populated = await Code.findById(newCode._id)
+      .populate("usedBy", "username email userType")
+      .populate("assignedTo", "username email userType")
+      .lean();
+
+    const codeResponse = populated || newCode.toObject();
+    if (codeResponse.discount === undefined || codeResponse.discount === null) codeResponse.discount = discountValue;
 
     res.status(201).json({
       message: "Code created successfully",
@@ -104,7 +126,8 @@ exports.getAllCodes = async (req, res, next) => {
     const skip = (parseInt(page) - 1) * parseInt(limit);
 
     const codes = await Code.find(query)
-      .populate("usedBy", "username email")
+      .populate("usedBy", "username email userType")
+      .populate("assignedTo", "username email userType")
       .sort({ createdAt: -1 })
       .skip(skip)
       .limit(parseInt(limit))
