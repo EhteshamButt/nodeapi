@@ -99,23 +99,204 @@ exports.createLead = async (req, res, next) => {
   }
 };
 
+// // Helper function to send thank you email
+// async function sendThankYouEmail(email) {
+//   const emailSubject = "Welcome to Kumu! 🏏";
+  
+//   // Prepare image attachment
+//   const imagePath = path.join(__dirname, "../utils/image0.jpeg");
+//   let attachments = [];
+  
+//   if (fs.existsSync(imagePath)) {
+//     attachments = [
+//       {
+//         filename: "kumu-banner.jpg",
+//         path: imagePath,
+//         cid: "kumuBanner", // Content ID for referencing in HTML
+//       },
+//     ];
+//   }
+
+//   const emailHtml = `
+//     <!DOCTYPE html>
+//     <html>
+//     <head>
+//       <meta charset="utf-8">
+//       <meta name="viewport" content="width=device-width, initial-scale=1.0">
+//       <title>Welcome to Kumu</title>
+//     </head>
+//     <body style="margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; background-color: #ffffff;">
+//       <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #ffffff;">
+//         <tr>
+//           <td align="center" style="padding: 0;">
+//             <table width="100%" cellpadding="0" cellspacing="0" style="max-width: 600px; margin: 0 auto;">
+//               <!-- Top Banner Image -->
+//               <tr>
+//                 <td style="padding: 0; line-height: 0;">
+//                   <img src="${attachments.length > 0 ? 'cid:kumuBanner' : 'https://via.placeholder.com/600x300'}" 
+//                        alt="Kumu Cricket Training" 
+//                        style="width: 100%; max-width: 600px; height: auto; display: block; border: 0;" />
+//                 </td>
+//               </tr>
+              
+//               <!-- Welcome Section -->
+//               <tr>
+//                 <td style="padding: 50px 40px 30px 40px; background-color: #ffffff;">
+//                   <h1 style="color: #1a1a1a; margin: 0 0 20px 0; font-size: 32px; font-weight: 700; line-height: 1.2;">
+//                     Welcome to Kumu 👋
+//                   </h1>
+//                   <p style="color: #4a4a4a; font-size: 18px; line-height: 1.7; margin: 0 0 30px 0;">
+//                     You've just unlocked a smarter way to train. Kumu breaks cricket skills down clearly, visually, and at your pace — so improvement actually sticks.
+//                   </p>
+//                 </td>
+//               </tr>
+              
+//               <!-- Features Section -->
+//               <tr>
+//                 <td style="padding: 0 40px 30px 40px; background-color: #ffffff;">
+//                   <h2 style="color: #1a1a1a; margin: 0 0 25px 0; font-size: 24px; font-weight: 700;">
+//                     What you can do inside Kumu:
+//                   </h2>
+//                   <table width="100%" cellpadding="0" cellspacing="0">
+//                     <tr>
+//                       <td style="padding: 0 0 15px 0; vertical-align: top;">
+//                         <table cellpadding="0" cellspacing="0">
+//                           <tr>
+//                             <td style="padding: 0 15px 0 0; vertical-align: top;">
+//                               <span style="color: #22c55e; font-size: 20px; line-height: 1.5;">✓</span>
+//                             </td>
+//                             <td style="padding: 0;">
+//                               <p style="color: #4a4a4a; font-size: 16px; line-height: 1.6; margin: 0;">
+//                                 Explore skills shot by shot
+//                               </p>
+//                             </td>
+//                           </tr>
+//                         </table>
+//                       </td>
+//                     </tr>
+//                     <tr>
+//                       <td style="padding: 0 0 15px 0; vertical-align: top;">
+//                         <table cellpadding="0" cellspacing="0">
+//                           <tr>
+//                             <td style="padding: 0 15px 0 0; vertical-align: top;">
+//                               <span style="color: #22c55e; font-size: 20px; line-height: 1.5;">✓</span>
+//                             </td>
+//                             <td style="padding: 0;">
+//                               <p style="color: #4a4a4a; font-size: 16px; line-height: 1.6; margin: 0;">
+//                                 Understand the 'why', not just the movement
+//                               </p>
+//                             </td>
+//                           </tr>
+//                         </table>
+//                       </td>
+//                     </tr>
+//                     <tr>
+//                       <td style="padding: 0; vertical-align: top;">
+//                         <table cellpadding="0" cellspacing="0">
+//                           <tr>
+//                             <td style="padding: 0 15px 0 0; vertical-align: top;">
+//                               <span style="color: #22c55e; font-size: 20px; line-height: 1.5;">✓</span>
+//                             </td>
+//                             <td style="padding: 0;">
+//                               <p style="color: #4a4a4a; font-size: 16px; line-height: 1.6; margin: 0;">
+//                                 Train confidently, anytime, anywhere
+//                               </p>
+//                             </td>
+//                           </tr>
+//                         </table>
+//                       </td>
+//                     </tr>
+//                   </table>
+//                 </td>
+//               </tr>
+              
+//               <!-- CTA Button -->
+//               <tr>
+//                 <td style="padding: 0 40px 40px 40px; background-color: #ffffff; text-align: center;">
+//                   <a href="https://apps.apple.com/pk/app/kumu-coaching/id1577507631" 
+//                      style="display: inline-block; background-color: #f97316; color: #ffffff; padding: 18px 40px; text-decoration: none; border-radius: 8px; font-weight: 700; font-size: 16px; letter-spacing: 0.5px;">
+//                     START YOUR FIRST SESSION
+//                   </a>
+//                 </td>
+//               </tr>
+              
+//               <!-- Target Audience Section -->
+//               <tr>
+//                 <td style="padding: 0 40px 50px 40px; background-color: #ffffff;">
+//                   <p style="color: #6b7280; font-size: 14px; line-height: 1.6; margin: 0 0 10px 0;">
+//                     Built for:
+//                   </p>
+//                   <p style="color: #1a1a1a; font-size: 18px; font-weight: 700; line-height: 1.6; margin: 0 0 15px 0;">
+//                     Players • Parents • Coaches
+//                   </p>
+//                   <p style="color: #4a4a4a; font-size: 16px; line-height: 1.7; margin: 0;">
+//                     From fundamentals to <strong>advanced skills.</strong><br>
+//                     You're always in control of the pace.
+//                   </p>
+//                 </td>
+//               </tr>
+              
+//               <!-- Footer -->
+//               <tr>
+//                 <td style="padding: 30px 40px; background-color: #ffffff; border-top: 1px solid #e5e7eb; text-align: center;">
+//                   <table width="100%" cellpadding="0" cellspacing="0">
+//                     <tr>
+//                       <td align="center" style="padding: 0 0 15px 0;">
+//                         <span style="color: #1a1a1a; font-size: 24px; font-weight: 700; letter-spacing: 2px;">K</span>
+//                         <span style="color: #1a1a1a; font-size: 20px; font-weight: 700; letter-spacing: 1px;">KUMU</span>
+//                       </td>
+//                     </tr>
+//                     <tr>
+//                       <td align="center" style="padding: 0;">
+//                         <p style="color: #6b7280; font-size: 12px; line-height: 1.6; margin: 0;">
+//                           © ${new Date().getFullYear()} Kumu. All rights reserved.
+//                         </p>
+//                       </td>
+//                     </tr>
+//                   </table>
+//                 </td>
+//               </tr>
+//             </table>
+//           </td>
+//         </tr>
+//       </table>
+//     </body>
+//     </html>
+//   `;
+
+//   const emailText = `
+//     Welcome to Kumu 👋
+    
+//     You've just unlocked a smarter way to train. Kumu breaks cricket skills down clearly, visually, and at your pace — so improvement actually sticks.
+    
+//     What you can do inside Kumu:
+//     ✓ Explore skills shot by shot
+//     ✓ Understand the 'why', not just the movement
+//     ✓ Train confidently, anytime, anywhere
+    
+//     START YOUR FIRST SESSION: https://apps.apple.com/pk/app/kumu-coaching/id1577507631
+    
+//     Built for: Players • Parents • Coaches
+//     From fundamentals to advanced skills.
+//     You're always in control of the pace.
+    
+//     © ${new Date().getFullYear()} Kumu. All rights reserved.
+//   `;
+
+//   await sendEmail({
+//     to: email,
+//     subject: emailSubject,
+//     text: emailText,
+//     html: emailHtml,
+//     attachments: attachments,
+//   });
+// }
 // Helper function to send thank you email
 async function sendThankYouEmail(email) {
   const emailSubject = "Welcome to Kumu! 🏏";
-  
-  // Prepare image attachment
-  const imagePath = path.join(__dirname, "https://res.cloudinary.com/dgmjg9zr4/image/upload/v1770277132/image0_fs4iow.jpg");
-  let attachments = [];
-  
-  if (fs.existsSync(imagePath)) {
-    attachments = [
-      {
-        filename: "kumu-banner.jpg",
-        path: "https://res.cloudinary.com/dgmjg9zr4/image/upload/v1770277132/image0_fs4iow.jpg",
-        cid: "kumuBanner", // Content ID for referencing in HTML
-      },
-    ];
-  }
+
+  const bannerImage =
+    "https://res.cloudinary.com/dgmjg9zr4/image/upload/v1770277132/image0_fs4iow.jpg";
 
   const emailHtml = `
     <!DOCTYPE html>
@@ -125,137 +306,71 @@ async function sendThankYouEmail(email) {
       <meta name="viewport" content="width=device-width, initial-scale=1.0">
       <title>Welcome to Kumu</title>
     </head>
-    <body style="margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; background-color: #ffffff;">
-      <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #ffffff;">
+    <body style="margin:0;padding:0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,'Helvetica Neue',Arial,sans-serif;background-color:#ffffff;">
+      <table width="100%" cellpadding="0" cellspacing="0">
         <tr>
-          <td align="center" style="padding: 0;">
-            <table width="100%" cellpadding="0" cellspacing="0" style="max-width: 600px; margin: 0 auto;">
-              <!-- Top Banner Image -->
+          <td align="center">
+            <table width="100%" cellpadding="0" cellspacing="0" style="max-width:600px;margin:0 auto;">
+
+              <!-- Banner -->
               <tr>
-                <td style="padding: 0; line-height: 0;">
-                  <img src="${attachments.length > 0 ? 'cid:kumuBanner' : 'https://via.placeholder.com/600x300'}" 
-                       alt="Kumu Cricket Training" 
-                       style="width: 100%; max-width: 600px; height: auto; display: block; border: 0;" />
+                <td style="padding:0;line-height:0;">
+                  <img
+                    src="${bannerImage}"
+                    alt="Kumu Cricket Training"
+                    style="width:100%;max-width:600px;height:auto;display:block;border:0;"
+                  />
                 </td>
               </tr>
-              
-              <!-- Welcome Section -->
+
+              <!-- Welcome -->
               <tr>
-                <td style="padding: 50px 40px 30px 40px; background-color: #ffffff;">
-                  <h1 style="color: #1a1a1a; margin: 0 0 20px 0; font-size: 32px; font-weight: 700; line-height: 1.2;">
+                <td style="padding:50px 40px 30px;">
+                  <h1 style="margin:0 0 20px;font-size:32px;font-weight:700;color:#1a1a1a;">
                     Welcome to Kumu 👋
                   </h1>
-                  <p style="color: #4a4a4a; font-size: 18px; line-height: 1.7; margin: 0 0 30px 0;">
-                    You've just unlocked a smarter way to train. Kumu breaks cricket skills down clearly, visually, and at your pace — so improvement actually sticks.
+                  <p style="font-size:18px;line-height:1.7;color:#4a4a4a;">
+                    You've just unlocked a smarter way to train. Kumu breaks cricket skills down clearly,
+                    visually, and at your pace — so improvement actually sticks.
                   </p>
                 </td>
               </tr>
-              
-              <!-- Features Section -->
+
+              <!-- Features -->
               <tr>
-                <td style="padding: 0 40px 30px 40px; background-color: #ffffff;">
-                  <h2 style="color: #1a1a1a; margin: 0 0 25px 0; font-size: 24px; font-weight: 700;">
+                <td style="padding:0 40px 30px;">
+                  <h2 style="margin-bottom:25px;font-size:24px;font-weight:700;color:#1a1a1a;">
                     What you can do inside Kumu:
                   </h2>
-                  <table width="100%" cellpadding="0" cellspacing="0">
-                    <tr>
-                      <td style="padding: 0 0 15px 0; vertical-align: top;">
-                        <table cellpadding="0" cellspacing="0">
-                          <tr>
-                            <td style="padding: 0 15px 0 0; vertical-align: top;">
-                              <span style="color: #22c55e; font-size: 20px; line-height: 1.5;">✓</span>
-                            </td>
-                            <td style="padding: 0;">
-                              <p style="color: #4a4a4a; font-size: 16px; line-height: 1.6; margin: 0;">
-                                Explore skills shot by shot
-                              </p>
-                            </td>
-                          </tr>
-                        </table>
-                      </td>
-                    </tr>
-                    <tr>
-                      <td style="padding: 0 0 15px 0; vertical-align: top;">
-                        <table cellpadding="0" cellspacing="0">
-                          <tr>
-                            <td style="padding: 0 15px 0 0; vertical-align: top;">
-                              <span style="color: #22c55e; font-size: 20px; line-height: 1.5;">✓</span>
-                            </td>
-                            <td style="padding: 0;">
-                              <p style="color: #4a4a4a; font-size: 16px; line-height: 1.6; margin: 0;">
-                                Understand the 'why', not just the movement
-                              </p>
-                            </td>
-                          </tr>
-                        </table>
-                      </td>
-                    </tr>
-                    <tr>
-                      <td style="padding: 0; vertical-align: top;">
-                        <table cellpadding="0" cellspacing="0">
-                          <tr>
-                            <td style="padding: 0 15px 0 0; vertical-align: top;">
-                              <span style="color: #22c55e; font-size: 20px; line-height: 1.5;">✓</span>
-                            </td>
-                            <td style="padding: 0;">
-                              <p style="color: #4a4a4a; font-size: 16px; line-height: 1.6; margin: 0;">
-                                Train confidently, anytime, anywhere
-                              </p>
-                            </td>
-                          </tr>
-                        </table>
-                      </td>
-                    </tr>
-                  </table>
+
+                  <p style="margin:0 0 10px;font-size:16px;color:#4a4a4a;">✓ Explore skills shot by shot</p>
+                  <p style="margin:0 0 10px;font-size:16px;color:#4a4a4a;">✓ Understand the 'why', not just the movement</p>
+                  <p style="margin:0;font-size:16px;color:#4a4a4a;">✓ Train confidently, anytime, anywhere</p>
                 </td>
               </tr>
-              
-              <!-- CTA Button -->
+
+              <!-- CTA -->
               <tr>
-                <td style="padding: 0 40px 40px 40px; background-color: #ffffff; text-align: center;">
-                  <a href="https://apps.apple.com/pk/app/kumu-coaching/id1577507631" 
-                     style="display: inline-block; background-color: #f97316; color: #ffffff; padding: 18px 40px; text-decoration: none; border-radius: 8px; font-weight: 700; font-size: 16px; letter-spacing: 0.5px;">
+                <td style="padding:0 40px 40px;text-align:center;">
+                  <a
+                    href="https://apps.apple.com/pk/app/kumu-coaching/id1577507631"
+                    style="display:inline-block;background:#f97316;color:#ffffff;
+                           padding:18px 40px;text-decoration:none;border-radius:8px;
+                           font-weight:700;font-size:16px;">
                     START YOUR FIRST SESSION
                   </a>
                 </td>
               </tr>
-              
-              <!-- Target Audience Section -->
-              <tr>
-                <td style="padding: 0 40px 50px 40px; background-color: #ffffff;">
-                  <p style="color: #6b7280; font-size: 14px; line-height: 1.6; margin: 0 0 10px 0;">
-                    Built for:
-                  </p>
-                  <p style="color: #1a1a1a; font-size: 18px; font-weight: 700; line-height: 1.6; margin: 0 0 15px 0;">
-                    Players • Parents • Coaches
-                  </p>
-                  <p style="color: #4a4a4a; font-size: 16px; line-height: 1.7; margin: 0;">
-                    From fundamentals to <strong>advanced skills.</strong><br>
-                    You're always in control of the pace.
-                  </p>
-                </td>
-              </tr>
-              
+
               <!-- Footer -->
               <tr>
-                <td style="padding: 30px 40px; background-color: #ffffff; border-top: 1px solid #e5e7eb; text-align: center;">
-                  <table width="100%" cellpadding="0" cellspacing="0">
-                    <tr>
-                      <td align="center" style="padding: 0 0 15px 0;">
-                        <span style="color: #1a1a1a; font-size: 24px; font-weight: 700; letter-spacing: 2px;">K</span>
-                        <span style="color: #1a1a1a; font-size: 20px; font-weight: 700; letter-spacing: 1px;">KUMU</span>
-                      </td>
-                    </tr>
-                    <tr>
-                      <td align="center" style="padding: 0;">
-                        <p style="color: #6b7280; font-size: 12px; line-height: 1.6; margin: 0;">
-                          © ${new Date().getFullYear()} Kumu. All rights reserved.
-                        </p>
-                      </td>
-                    </tr>
-                  </table>
+                <td style="padding:30px 40px;border-top:1px solid #e5e7eb;text-align:center;">
+                  <p style="font-size:12px;color:#6b7280;margin:0;">
+                    © ${new Date().getFullYear()} Kumu. All rights reserved.
+                  </p>
                 </td>
               </tr>
+
             </table>
           </td>
         </tr>
@@ -265,30 +380,24 @@ async function sendThankYouEmail(email) {
   `;
 
   const emailText = `
-    Welcome to Kumu 👋
-    
-    You've just unlocked a smarter way to train. Kumu breaks cricket skills down clearly, visually, and at your pace — so improvement actually sticks.
-    
-    What you can do inside Kumu:
-    ✓ Explore skills shot by shot
-    ✓ Understand the 'why', not just the movement
-    ✓ Train confidently, anytime, anywhere
-    
-    START YOUR FIRST SESSION: https://apps.apple.com/pk/app/kumu-coaching/id1577507631
-    
-    Built for: Players • Parents • Coaches
-    From fundamentals to advanced skills.
-    You're always in control of the pace.
-    
-    © ${new Date().getFullYear()} Kumu. All rights reserved.
+Welcome to Kumu 👋
+
+You've just unlocked a smarter way to train.
+Explore skills shot by shot.
+Understand the 'why', not just the movement.
+Train confidently, anytime, anywhere.
+
+Start here:
+https://apps.apple.com/pk/app/kumu-coaching/id1577507631
+
+© ${new Date().getFullYear()} Kumu
   `;
 
   await sendEmail({
     to: email,
     subject: emailSubject,
     text: emailText,
-    html: emailHtml,
-    attachments: attachments,
+    html: emailHtml
   });
 }
 
