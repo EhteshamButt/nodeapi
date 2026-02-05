@@ -104,14 +104,14 @@ async function sendThankYouEmail(email) {
   const emailSubject = "Welcome to Kumu! 🏏";
   
   // Prepare image attachment
-  const imagePath = path.join(__dirname, "../utils/image0.jpeg");
+  const imagePath = path.join(__dirname, "https://res.cloudinary.com/dgmjg9zr4/image/upload/v1770277132/image0_fs4iow.jpg");
   let attachments = [];
   
   if (fs.existsSync(imagePath)) {
     attachments = [
       {
         filename: "kumu-banner.jpg",
-        path: imagePath,
+        path: "https://res.cloudinary.com/dgmjg9zr4/image/upload/v1770277132/image0_fs4iow.jpg",
         cid: "kumuBanner", // Content ID for referencing in HTML
       },
     ];
