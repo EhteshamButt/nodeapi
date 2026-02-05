@@ -152,19 +152,19 @@ exports.createCheckoutSession = async (req, res, next) => {
 
     // Build line items - use final amount (already discounted)
     const lineItems = [
-      {
-        price_data: {
-          currency: currency.toLowerCase(),
-          product_data: {
-            name: "Premium Subscription",
+        {
+          price_data: {
+            currency: currency.toLowerCase(),
+            product_data: {
+              name: "Premium Subscription",
             description: appliedCoupon 
               ? `Premium account access (${appliedCoupon.discount}% off with ${appliedCoupon.code})`
               : "Premium account access",
-          },
+            },
           unit_amount: Math.round(finalAmount * 100), // Final amount after discount in cents
+          },
+          quantity: 1,
         },
-        quantity: 1,
-      },
     ];
 
     // Create checkout session
@@ -223,8 +223,8 @@ exports.stripeWebhook = async (req, res, next) => {
       return res.status(500).json({ error: "Stripe not configured" });
     }
 
-    const sig = req.headers["stripe-signature"];
-    const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
+  const sig = req.headers["stripe-signature"];
+  const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
 
     if (!webhookSecret || webhookSecret === "whsec_your_webhook_secret_here") {
       console.error("ERROR: STRIPE_WEBHOOK_SECRET is not set or is placeholder!");
@@ -245,38 +245,38 @@ exports.stripeWebhook = async (req, res, next) => {
       }
     }
 
-    let event;
+  let event;
 
-    try {
+  try {
       event = stripe.webhooks.constructEvent(rawBody, sig, webhookSecret);
-    } catch (err) {
-      console.error("Webhook signature verification failed:", err.message);
+  } catch (err) {
+    console.error("Webhook signature verification failed:", err.message);
       return res.status(400).json({ error: `Webhook Error: ${err.message}` });
-    }
+  }
 
-    // Handle the event
-    try {
-      switch (event.type) {
-        case "checkout.session.completed":
-          const session = event.data.object;
-          const userId = session.metadata?.userId;
+  // Handle the event
+  try {
+    switch (event.type) {
+      case "checkout.session.completed":
+        const session = event.data.object;
+        const userId = session.metadata?.userId;
           const couponCode = session.metadata?.couponCode;
 
-          if (userId) {
-            const user = await User.findById(userId);
-            if (user) {
+        if (userId) {
+          const user = await User.findById(userId);
+          if (user) {
               const paymentDate = new Date();
               // Set subscription expiry to exactly 1 year from payment date
               const expiryDate = new Date(paymentDate);
               expiryDate.setFullYear(expiryDate.getFullYear() + 1);
               
-              user.paymentStatus = true;
+            user.paymentStatus = true;
               user.paymentDate = paymentDate;
               user.subscriptionExpiryDate = expiryDate;
               user.subscriptionStatus = "active";
-              await user.save();
+            await user.save();
               console.log(`Payment successful for user: ${userId}, expires on: ${expiryDate}`);
-            }
+          }
           }
 
           // Wallet commission credit (once per session)
@@ -325,21 +325,21 @@ exports.stripeWebhook = async (req, res, next) => {
             }
           } catch (walletErr) {
             console.error("Wallet credit error (non-fatal):", walletErr);
-          }
-          break;
+        }
+        break;
 
-        case "payment_intent.succeeded":
-          const paymentIntent = event.data.object;
-          console.log("PaymentIntent succeeded:", paymentIntent.id);
-          break;
+      case "payment_intent.succeeded":
+        const paymentIntent = event.data.object;
+        console.log("PaymentIntent succeeded:", paymentIntent.id);
+        break;
 
-        default:
-          console.log(`Unhandled event type: ${event.type}`);
-      }
+      default:
+        console.log(`Unhandled event type: ${event.type}`);
+    }
 
-      res.json({ received: true });
-    } catch (error) {
-      console.error("Webhook handler error:", error);
+    res.json({ received: true });
+  } catch (error) {
+    console.error("Webhook handler error:", error);
       console.error("Error stack:", error.stack);
       res.status(500).json({ error: "Webhook handler failed", message: error.message });
     }
@@ -448,7 +448,7 @@ exports.verifySession = async (req, res, next) => {
     if (!sessionId) {
       return res.status(400).json({
         success: false,
-        message: "Session ID is required",
+          message: "Session ID is required",
       });
     }
 
@@ -466,12 +466,12 @@ exports.verifySession = async (req, res, next) => {
             const expiryDate = new Date(paymentDate);
             expiryDate.setFullYear(expiryDate.getFullYear() + 1);
             
-            user.paymentStatus = true;
+          user.paymentStatus = true;
             user.paymentDate = paymentDate;
             user.subscriptionExpiryDate = expiryDate;
             user.subscriptionStatus = "active";
-            await user.save();
-          }
+          await user.save();
+        }
 
           // Check expiration and refresh user
           await checkSubscriptionExpiry(user);
@@ -481,7 +481,7 @@ exports.verifySession = async (req, res, next) => {
           // Return user data in expected format
           return res.status(200).json({
             success: true,
-            message: "Payment verified successfully",
+        message: "Payment verified successfully",
             user: {
               id: user._id.toString(),
               username: user.username,
@@ -491,8 +491,8 @@ exports.verifySession = async (req, res, next) => {
               subscriptionExpiryDate: user.subscriptionExpiryDate || null,
               subscriptionStatus: user.subscriptionStatus || "active",
             },
-          });
-        } else {
+      });
+    } else {
           return res.status(404).json({
             success: false,
             message: "User not found",
